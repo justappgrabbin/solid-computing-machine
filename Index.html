@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Universe - GNN Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .control-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        .control-panel h2 {
+            margin-bottom: 15px;
+            color: #00ff88;
+        }
+
+        .upload-area {
+            border: 2px dashed #00ff88;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .upload-area:hover {
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        .upload-area.dragover {
+            background: rgba(0, 255, 136, 0.2);
+            border-color: #00ffaa;
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            background: #111;
+            color: #00ff88;
+            border: 1px solid #333;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-bottom: 15px;
+            resize: vertical;
+        }
+
+        button {
+            background: #00ff88;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        button:hover {
+            background: #00ffaa;
+            transform: scale(1.05);
+        }
+
+        .info {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .node-label {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 100;
+            border: 1px solid #00ff88;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    
+    <div class="control-panel">
+        <h2>Code Universe</h2>
+        <div class="upload-area" id="uploadArea">
+            <p>📁 Drop files here or click to upload</p>
+            <input type="file" id="fileInput" multiple style="display: none;">
+        </div>
+        <textarea id="codeInput" placeholder="Or paste your code here..."></textarea>
+        <button id="processBtn">🚀 Process Code</button>
+        <div class="info">
+            <p>• Drag to rotate</p>
+            <p>• Scroll to zoom</p>
+            <p>• Click nodes to expand</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Graph Neural Network Simulation
+        class Node {
+            constructor(id, label, type, content = '') {
+                this.id = id;
+                this.label = label;
+                this.type = type;
+                this.content = content;
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.z = Math.random() * 500;
+                this.vx = 0;
+                this.vy = 0;
+                this.vz = 0;
+                this.radius = Math.max(20, Math.min(60, content.length / 10));
+                this.connections = [];
+                this.level = 0;
+                this.color = this.getTypeColor(type);
+                this.expanded = false;
+                this.children = [];
+            }
+
+            getTypeColor(type) {
+                const colors = {
+                    'function': '#00ff88',
+                    'class': '#ff6b6b',
+                    'variable': '#4ecdc4',
+                    'import': '#ffe66d',
+                    'comment': '#95e1d3',
+                    'file': '#a8e6cf',
+                    'method': '#ff8b94',
+                    'default': '#88d8c0'
+                };
+                return colors[type] || colors.default;
+            }
+
+            update() {
+                this.vx *= 0.95;
+                this.vy *= 0.95;
+                this.vz *= 0.95;
+                
+                this.x += this.vx;
+                this.y += this.vy;
+                this.z += this.vz;
+
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const dx = centerX - this.x;
+                const dy = centerY - this.y;
+                
+                this.vx += dx * 0.001;
+                this.vy += dy * 0.001;
+                
+                this.children.forEach(child => {
+                    const cdx = this.x - child.x;
+                    const cdy = this.y - child.y;
+                    const cdz = this.z - child.z;
+                    const dist = Math.sqrt(cdx * cdx + cdy * cdy + cdz * cdz);
+                    
+                    if (dist > 100) {
+                        child.vx += cdx * 0.001;
+                        child.vy += cdy * 0.001;
+                        child.vz += cdz * 0.001;
+                    }
+                });
+            }
+
+            draw() {
+                const perspective = 500 / (500 + this.z);
+                const screenX = this.x + (this.x - canvas.width / 2) * (1 - perspective);
+                const screenY = this.y + (this.y - canvas.height / 2) * (1 - perspective);
+                const screenRadius = this.radius * perspective;
+
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, screenRadius, 0, Math.PI * 2);
+                
+                const gradient = ctx.createRadialGradient(
+                    screenX - screenRadius / 3,
+                    screenY - screenRadius / 3,
+                    0,
+                    screenX,
+                    screenY,
+                    screenRadius
+                );
+                
+                gradient.addColorStop(0, this.color + 'ff');
+                gradient.addColorStop(1, this.color + '66');
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.fillStyle = '#000';
+                ctx.font = `${12 * perspective}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.label, screenX, screenY);
+            }
+        }
+
+        class Graph {
+            constructor() {
+                this.nodes = [];
+                this.edges = [];
+                this.selectedNode = null;
+                this.mouseX = 0;
+                this.mouseY = 0;
+                this.rotationX = 0;
+                this.rotationY = 0;
+                this.zoom = 1;
+            }
+
+            addNode(label, type, content) {
+                const id = this.nodes.length;
+                const node = new Node(id, label, type, content);
+                this.nodes.push(node);
+                return node;
+            }
+
+            addEdge(node1, node2) {
+                this.edges.push({ from: node1, to: node2 });
+            }
+
+            analyzeCode(code) {
+                this.nodes = [];
+                this.edges = [];
+
+                const functions = code.match(/function\s+(\w+)\s*\([^)]*\)\s*\{[^{}]*\}/g) || [];
+                const classes = code.match(/class\s+(\w+)\s*\{[^{}]*\}/g) || [];
+                const variables = code.match(/(const|let|var)\s+(\w+)\s*=/g) || [];
+                const imports = code.match(/(import|require)\s+[^;]+/g) || [];
+
+                functions.forEach(func => {
+                    const name = func.match(/function\s+(\w+)/)[1];
+                    this.addNode(name, 'function', func);
+                });
+
+                classes.forEach(cls => {
+                    const name = cls.match(/class\s+(\w+)/)[1];
+                    this.addNode(name, 'class', cls);
+                });
+
+                variables.forEach(vr => {
+                    const name = vr.match(/(const|let|var)\s+(\w+)/)[2];
+                    this.addNode(name, 'variable', vr);
+                });
+
+                imports.forEach(imp => {
+                    this.addNode(imp.substring
+
+
+                                 // Tender AI
+const tenderChat = document.getElementById('tenderChat');
+const userIntentInput = document.getElementById('userIntent');
+const tenderPanel = document.getElementById('tenderPanel');
+const toggleTenderBtn = document.getElementById('toggleTenderBtn');
+
+let tenderMode = false;
+
+toggleTenderBtn.onclick = () => {
+  tenderMode = !tenderMode;
+  tenderPanel.style.display = tenderMode ? 'block' : 'none';
+  if (tenderMode) {
+    askTenderQuestion();
+  }
+};
+
+function addTenderMessage(text, sender = 'ai') {
+  const msg = document.createElement('div');
+  msg.className = `tender-message ${sender}`;
+  msg.textContent = text;
+  tenderChat.appendChild(msg);
+  tenderChat.scrollTop = tenderChat.scrollHeight;
+}
+
+function askTenderQuestion() {
+  const questions = [
+    "What was the main purpose of this codebase?",
+    "Which part are you most unsure about?",
+    "Are you building a tool, a game, a service—what's the vibe?",
+    "Do you want help refactoring, debugging, or extending this?",
+    "What's the most annoying bug or missing feature?"
+  ];
+  const q = questions[Math.floor(Math.random() * questions.length)];
+  addTenderMessage(q);
+}
+
+document.getElementById('sendIntentBtn').onclick = () => {
+  const intent = userIntentInput.value.trim();
+  if (!intent) return;
+
+  addTenderMessage(intent, 'user');
+
+  setTimeout(() => {
+    const suggestions = generateTenderSuggestions(intent);
+    addTenderMessage("🧠 Based on what you said:");
+    suggestions.forEach(s => addTenderMessage("• " + s));
+  }, 500);
+
+  userIntentInput.value = '';
+};
+
+function generateTenderSuggestions(intent) {
+  const lower = intent.toLowerCase();
+  const ideas = [];
+
+  if (lower.includes("game")) {
+    ideas.push("Consider adding a state machine for game phases.");
+    ideas.push("You could use a tweening library for smooth animations.");
+  }
+  if (lower.includes("tool")) {
+    ideas.push("Add a CLI wrapper for power users.");
+    ideas.push("Export results as JSON or CSV for automation.");
+  }
+  if (lower.includes("api")) {
+    ideas.push("Use OpenAPI to auto-generate docs.");
+    ideas.push("Add rate-limiting middleware.");
+  }
+  if (lower.includes("bug")) {
+    ideas.push("Add unit tests for edge cases.");
+    ideas.push("Use a linter to catch silent syntax issues.");
+  }
+  if (lower.includes("refactor")) {
+    ideas.push("Group utility functions into modules.");
+    ideas.push("Replace magic numbers with named constants.");
+  }
+
+  if (ideas.length === 0) {
+    ideas.push("Consider writing a README to clarify intent.");
+    ideas.push("Try sketching a rough architecture diagram.");
+  }
+
+  return ideas;
+}
+
+document.getElementById('shareBtn').onclick = () => {
+  const exportData = {
+    nodes: graph.nodes.map(n => ({ label: n.label, type: n.type, content: n.content })),
+    intent: userIntentInput.value || "No intent provided",
+    suggestions: Array.from(tenderChat.children)
+      .filter(div => div.classList.contains('ai'))
+      .map(div => div.textContent)
+  };
+
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'codeverse_tender.json';
+  a.click();
+};
+
+                                .later-item {
+  padding: 4px 6px;
+  margin: 2px 0;
+  background: #221a00;
+  border-left: 2px solid #f92;
+  font-family: monospace;
+  cursor: pointer;
+  font-size: 10px;
+
+
+              /* ---------- FILE-LATER QUEUE ---------- */
+const later = [];                 // pending objects
+const laterList   = document.getElementById('laterList');
+const laterPanel  = document.getElementById('laterPanel');
+const toggleLater = document.getElementById('toggleLaterBtn');
+const clearLater  = document.getElementById('clearLaterBtn');
+
+/* push a raw / unmatched file or blob */
+function enqueueLater(name, rawText) {
+  later.push({name, rawText});
+  renderLater();
+}
+
+/* draw the list */
+function renderLater() {
+  laterList.innerHTML = '';
+  if (later.length === 0) { toggleLater.style.display = 'none'; return; }
+  toggleLater.style.display = 'block';
+  later.forEach((item,idx)=>{
+    const div=document.createElement('div'); div.className='later-item';
+    div.textContent=item.name;
+    div.title='click to re-parse this chunk';
+    div.onclick=()=>injectLaterNode(idx);
+    laterList.appendChild(div);
+  });
+}
+
+/* turn a later-item into a fresh node in the graph */
+function injectLaterNode(idx) {
+  const {name,rawText} = later.splice(idx,1)[0];
+  // force a single "uncategorised" node so it appears immediately
+  const n = graph.addNode(name, 'later', rawText.substring(0,200));
+  n.color = '#ff9922';
+  // attach weakly to centre so it drifts into view
+  n.vx += (canvas.width/2 - n.x)*0.02;
+  n.vy += (canvas.height/2 - n.y)*0.02;
+  renderLater();
+}
+
+/* UI toggles */
+toggleLater.onclick = () => {
+  laterPanel.style.display = (laterPanel.style.display==='block') ? 'none' : 'block';
+};
+clearLater.onclick = () => { later.length=0; renderLater(); };
+}
+.later-item:hover { background: #332200; }
+
+      // OLD: just ignored
+// return;
+
+// NEW: send to later queue
+enqueueLater(fileName||"unknown_block", rawContent);
+
+      
