@@ -8,33 +8,204 @@
   <!-- Pyodide -->
   <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
 
-  <!-- LiteGraph.js (smaller build for mobile) -->
-  <script src="https://unpkg.com/litegraph.js@0.7.12/build/litegraph.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/litegraph.js@0.7.12/css/litegraph.css"/>
-
-  <!-- PeerJS -->
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-
   <style>
-    :root {
-      --bg: #0a0a0f;
-      --panel: rgba(26, 26, 58, 0.9);
-      --accent: #a78bfa;
-      --text: #e0e0ff;
-      --border: #444466;
-    }
-    * { box-sizing: border-box; margin:0; padding:0; }
     body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: system-ui, sans-serif;
+      margin: 0;
       height: 100vh;
+      background: linear-gradient(135deg, #0a0015, #1a0033);
+      color: #e0e0ff;
+      font-family: system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       overflow: hidden;
-      touch-action: manipulation; /* Better mobile touch */
     }
-    #top {
-      height: 60px;
-      background: #111133;
+    h1 {
+      font-size: 4rem;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(90deg, #a78bfa, #fbbf24);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 30px rgba(167, 139, 250, 0.6);
+      cursor: pointer;
+    }
+    p { font-size: 1.4rem; margin-bottom: 3rem; max-width: 700px; text-align: center; opacity: 0.9; }
+    #launch-btn {
+      padding: 1.8rem 5rem;
+      font-size: 2rem;
+      font-weight: bold;
+      background: linear-gradient(135deg, #a78bfa, #7c3aed);
+      color: white;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      box-shadow: 0 15px 40px rgba(167, 139, 250, 0.5);
+      transition: all 0.4s ease;
+    }
+    #launch-btn:hover { transform: translateY(-6px); box-shadow: 0 25px 60px rgba(167, 139, 250, 0.7); }
+    #status { margin-top: 2.5rem; font-size: 1.2rem; color: #a78bfa; min-height: 2.5rem; }
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 0, 21, 0.98);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.8s;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 80px;
+      height: 80px;
+      border: 8px solid #a78bfa;
+      border-top: 8px solid transparent;
+      border-radius: 50%;
+      animation: spin 1.2s linear infinite;
+      margin-bottom: 2rem;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Redeem Box */
+    #redeem-panel {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 0, 21, 0.95);
+      display: none;
+      flex-direction: column;
+      z-index: 10000;
+      padding: 40px 20px;
+      color: #e0e0ff;
+    }
+    #redeem-panel.show { display: flex; }
+    #redeem-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    #redeem-text {
+      flex: 1;
+      background: #1a1a3a;
+      border: 1px solid #444466;
+      color: #e0e0ff;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 1rem;
+      min-height: 200px;
+      resize: vertical;
+      margin-bottom: 16px;
+    }
+    #redeem-btn {
+      padding: 16px 32px;
+      font-size: 1.3rem;
+      background: #a78bfa;
+      color: #0a0a0f;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #redeem-status { margin-top: 16px; font-size: 1.1rem; color: #fbbf24; }
+  </style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <h2>Initializing Resonance Field...</h2>
+  <p id="loading-status">Loading consciousness engine...</p>
+</div>
+
+<div style="text-align:center; z-index: 100;">
+  <h1 ondblclick="toggleRedeem()">Resona</h1>
+  <p>The Resonance Network — a mirror that learns you, guides you, and protects you from your own spirals.</p>
+  <button id="launch-btn">Launch Resona</button>
+  <div id="status"></div>
+</div>
+
+<!-- Redeem Box -->
+<div id="redeem-panel">
+  <div id="redeem-header">
+    <h2>Redeem Code / Add Text</h2>
+    <button onclick="toggleRedeem()">Close</button>
+  </div>
+  
+  <textarea id="redeem-text" placeholder="Paste text here with comments...
+# @stella-prompt: Science entry focus
+Analyze gates with I Ching geometry.
+
+# @residence-tone: relational
+Speak warmly, emphasize connection.
+
+# @scaffold-block: profile-001
+{ \"entry\": \"residence\", \"tone\": \"social\", \"prompt\": \"Prioritize shared wins\" }"></textarea>
+  
+  <button id="redeem-btn" onclick="redeemCode()">Redeem & Place</button>
+  
+  <div id="redeem-status"></div>
+</div>
+
+<script>
+// Launch (simplified - assumes Pyodide loads your engine)
+document.getElementById('launch-btn').onclick = async () => {
+  document.getElementById('launch-screen').classList.add('hidden');
+  document.getElementById('status').textContent = "Resona Online — ready for input";
+  // Your real Pyodide + engine code goes here (from previous versions)
+};
+
+// Redeem Toggle (double-click logo)
+function toggleRedeem() {
+  document.getElementById('redeem-panel').classList.toggle('show');
+}
+
+// Redeem & Inject
+function redeemCode() {
+  const text = document.getElementById('redeem-text').value.trim();
+  if (!text) {
+    document.getElementById('redeem-status').textContent = "Nothing to redeem.";
+    return;
+  }
+
+  const status = document.getElementById('redeem-status');
+  status.textContent = "Processing...";
+
+  // Parse lines with comments
+  const lines = text.split('\n');
+  let currentTarget = 'general';
+  let content = '';
+
+  lines.forEach(line => {
+    line = line.trim();
+    if (line.startsWith('#')) {
+      const match = line.match(/@(\w+[-\w]*):/);
+      if (match) {
+        // Save previous content if any
+        if (content) {
+          injectContent(currentTarget, content.trim());
+        }
+        currentTarget = match[1];
+        content = line.replace(/#.*?:/, '').trim();
+      }
+    } else if (line) {
+      content += line + '\n';
+    }
+  });
+
+  // Save last block
+  if (content) {
+    injectContent(currentTarget, content.trim());
+  }
+
+  status.textContent = "Injected! Check console or agent response.";
+}
+
+// Simple injection (expand this when Pyodide is live)
+function injectContent(target, content) {
+  console.log(`Injected into ${target}:`, content);
+  // When Pyodide is ready, send to Python:
+  // if (pyodide) pyodide.runPythonAsync(`set_\( {target.replace(/-/g, '_')}(""" \){content.replace(/"/g, '\\"')}""")`);
+}
+</script>
+</body>
+</html>      background: #111133;
       display: flex;
       align-items: center;
       justify-content: space-between;
