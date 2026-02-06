@@ -1,124 +1,312 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Code Universe – self-hosting GNN + Later-Queue</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Resona • Resonance Network</title>
+
+  <!-- Pyodide -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
+
+  <!-- LiteGraph.js (smaller build for mobile) -->
+  <script src="https://unpkg.com/litegraph.js@0.7.12/build/litegraph.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/litegraph.js@0.7.12/css/litegraph.css"/>
+
+  <!-- PeerJS -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
   <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;background:#0a0a0a;color:#fff;overflow:hidden}
-    canvas{position:fixed;top:0;left:0;width:100%;height:100%}
-
-    /* ---- CONTROL PANEL (top-right) ---- */
-    .control-panel{position:fixed;top:20px;right:20px;background:rgba(20,20,20,.95);padding:20px;border-radius:10px;border:1px solid #333;z-index:1000;width:300px}
-    .control-panel h2{margin-bottom:15px;color:#0f8}
-    .upload-area{border:2px dashed #0f8;padding:20px;text-align:center;cursor:pointer;transition:all .3s;margin-bottom:15px}
-    .upload-area:hover{background:rgba(0,255,136,.1)}
-    .upload-area.dragover{background:rgba(0,255,136,.2);border-color:#0fa}
-    textarea{width:100%;height:150px;background:#111;color:#0f8;border:1px solid #333;padding:10px;font-family:Courier New,monospace;font-size:12px;margin-bottom:15px;resize:vertical}
-    button{background:#0f8;color:#000;border:none;padding:10px 20px;cursor:pointer;font-weight:bold;transition:all .3s;width:100%}
-    button:hover{background:#0fa;transform:scale(1.05)}
-    .info{margin-top:15px;font-size:12px;color:#888}
-    .node-label{position:absolute;background:#000c;padding:5px 10px;border-radius:5px;font-size:12px;pointer-events:none;z-index:100;border:1px solid #0f8}
-
-    /* ---- TENDER PANEL ---- */
-    .tender-panel{position:fixed;bottom:20px;left:20px;width:350px;max-height:400px;background:rgba(10,10,10,.95);border:1px solid #0f8;border-radius:10px;padding:15px;overflow-y:auto;display:none;z-index:1001}
-    .tender-message{margin-bottom:10px;padding:8px 12px;border-radius:6px;font-size:14px}
-    .tender-message.ai{background:#0f82;color:#0f8}
-    .tender-message.user{background:#06f2;color:#66ccff;text-align:right}
-    textarea#userIntent{width:100%;height:60px;font-size:13px;margin-top:10px;resize:none}
-    button#sendIntentBtn{margin-top:5px;background:#06f;color:#fff}
-    button#shareBtn{background:#fc0;color:#000}
-
-    /* ---- LATER-QUEUE PANEL ---- */
-    #laterPanel{position:fixed;bottom:80px;right:20px;width:220px;max-height:300px;background:rgba(10,10,10,.95);border:1px solid #f92;border-radius:8px;padding:10px;display:none;z-index:1003}
-    #laterPanel>div:first-child{color:#f92;font-size:12px;margin-bottom:6px}
-    #laterList{font-size:11px;max-height:240px;overflow-y:auto}
-    #clearLaterBtn{margin-top:6px;width:100%;font-size:10px;background:#444;color:#fff}
-    .later-item{padding:4px 6px;margin:2px 0;background:#221a00;border-left:2px solid #f92;font-family:monospace;cursor:pointer;font-size:10px}
-    .later-item:hover{background:#332200}
-
-    /* ---- FLOATING BUTTONS ---- */
-    .toggle-tender{position:fixed;bottom:20px;right:20px;width:50px;height:50px;border-radius:50%;background:#0f8;color:#000;border:none;font-size:20px;cursor:pointer;z-index:1002}
-    #toggleLaterBtn{position:fixed;bottom:120px;right:20px;width:40px;height:40px;border-radius:50%;background:#f92;color:#000;border:none;display:none;cursor:pointer;z-index:1002}
+    :root {
+      --bg: #0a0a0f;
+      --panel: rgba(26, 26, 58, 0.9);
+      --accent: #a78bfa;
+      --text: #e0e0ff;
+      --border: #444466;
+    }
+    * { box-sizing: border-box; margin:0; padding:0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      touch-action: manipulation; /* Better mobile touch */
+    }
+    #top {
+      height: 60px;
+      background: #111133;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      z-index: 100;
+    }
+    #logo { font-size: 1.4rem; font-weight: bold; color: var(--accent); }
+    #menu-btn { background: none; border: none; color: var(--text); font-size: 1.6rem; cursor: pointer; }
+    #tabs {
+      display: none;
+      position: absolute;
+      top: 60px;
+      left: 0;
+      right: 0;
+      background: var(--panel);
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      z-index: 99;
+    }
+    #tabs.show { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+    .tab {
+      padding: 8px 16px;
+      background: #1a1a3a;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .tab.active { background: var(--accent); color: #0a0a0f; }
+    #content {
+      height: calc(100vh - 60px);
+      display: flex;
+      flex-direction: column;
+    }
+    #main-view {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+    }
+    #props {
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      padding: 16px;
+      max-height: 40vh;
+      overflow-y: auto;
+    }
+    button, input[type="range"] {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sensory-group { margin: 16px 0; }
+    .sentinel-log {
+      font-size: 0.85rem;
+      color: #ffcc00;
+      background: #0a0a1a;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 12px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    #chat-area {
+      padding: 16px;
+      border-top: 1px solid var(--border);
+      background: var(--panel);
+    }
+    #messages {
+      height: 120px;
+      overflow-y: auto;
+      background: #0a0a1a;
+      border: 1px solid var(--border);
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    #chat-input {
+      width: 100%;
+      padding: 12px;
+      background: #1a1a3a;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    #launch-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      transition: opacity 0.6s;
+    }
+    #launch-screen.hidden { opacity: 0; pointer-events: none; }
+    #launch-btn {
+      padding: 20px 60px;
+      font-size: 1.8rem;
+      background: linear-gradient(135deg, var(--accent), #7c3aed);
+      color: white;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(167,139,250,0.4);
+    }
   </style>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
 
-  <!-- CONTROL PANEL -->
-  <div class="control-panel">
-    <h2>Code Universe</h2>
-    <div class="upload-area" id="uploadArea"><p>📁 Drop files / click to upload</p><input type="file" id="fileInput" multiple style="display:none"></div>
-    <textarea id="codeInput" placeholder="…or paste code here"></textarea>
-    <button id="processBtn">🚀 Process Code</button>
-    <div class="info"><p>• Drag to rotate  • Scroll zoom  • Click node expand</p></div>
+<div id="launch-screen">
+  <h1 style="font-size: 4rem; color: var(--accent); margin-bottom: 1.5rem;">Resona</h1>
+  <p style="font-size: 1.3rem; text-align: center; max-width: 90%; margin-bottom: 2rem;">
+    Resonance Network — mirror, guide, protector
+  </p>
+  <button id="launch-btn">Launch</button>
+</div>
+
+<div id="top">
+  <div id="logo">Resona</div>
+  <button id="menu-btn" onclick="toggleTabs()">☰</button>
+</div>
+
+<div id="tabs">
+  <div class="tab active" onclick="setEntryPoint('stella')">Stella</div>
+  <div class="tab" onclick="setEntryPoint('residence')">Residence</div>
+  <div class="tab" onclick="setEntryPoint('game')">Game</div>
+</div>
+
+<div id="content">
+  <div id="main-view">
+    <h2>Welcome to the Resonance Network</h2>
+    <p>Choose your entry point above. The graph is watching...</p>
+    <!-- Graph canvas hidden on mobile by default -->
+    <canvas id="canvas" style="width:100%; height:300px; display:none;"></canvas>
   </div>
 
-  <!-- TENDER -->
-  <button class="toggle-tender" id="toggleTenderBtn">💡</button>
-  <div class="tender-panel" id="tenderPanel">
-    <h3 style="color:#0f8;margin-bottom:10px">Code Tender 🌱</h3>
-    <div id="tenderChat"></div>
-    <textarea id="userIntent" placeholder="Tell me what you were trying to build…"></textarea>
-    <button id="sendIntentBtn">Send</button>
-    <button id="shareBtn">Share Codebase + Ideas</button>
+  <div id="props">
+    <h3>Sensory & Sentinel</h3>
+    
+    <div class="sensory-group">
+      <label>Clutter: <span id="clutter-val">0.5</span></label>
+      <input type="range" min="0" max="1" step="0.1" value="0.5" id="clutter-slider" class="sensory-slider" oninput="updateSensory()">
+    </div>
+    
+    <div class="sensory-group">
+      <label>Calm: <span id="calm-val">0.5</span></label>
+      <input type="range" min="0" max="1" step="0.1" value="0.5" id="calm-slider" class="sensory-slider" oninput="updateSensory()">
+    </div>
+    
+    <button onclick="startMotionCapture()">Enable Motion</button>
+    <div id="motion-status">Motion: —</div>
+    
+    <button onclick="trackPattern()">Track Spiral</button>
+    <button onclick="rewindState()">Rewind</button>
+    
+    <div class="sentinel-log" id="sentinel-log">Sentinel: Monitoring...</div>
+    
+    <h4>Chat</h4>
+    <div id="messages"></div>
+    <input id="chat-input" placeholder="Talk to agent..." onkeydown="if(event.key==='Enter') sendChat()"/>
   </div>
+</div>
 
-  <!-- LATER QUEUE -->
-  <button id="toggleLaterBtn">♻</button>
-  <div id="laterPanel">
-    <div>📂 LATER FILES</div>
-    <div id="laterList"></div>
-    <button id="clearLaterBtn">clear</button>
-  </div>
+<script>
+// One-button launch
+document.getElementById('launch-btn').onclick = async () => {
+  document.getElementById('launch-screen').classList.add('hidden');
+  document.getElementById('status').textContent = "Initializing...";
+  
+  // Load Pyodide + engine (same as before, condensed)
+  const pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/" });
+  await pyodide.loadPackage("numpy");
+  
+  await pyodide.runPythonAsync(`
+    # Your full Python engine here (condensed version for demo)
+    import numpy as np
+    from enum import Enum
+    from dataclasses import dataclass
+    
+    class Dimension(Enum):
+        MOVEMENT = 0
+        EVOLUTION = 1
+        BEING = 2
+        DESIGN = 3
+        SPACE = 4
+    
+    @dataclass
+    class DimensionalVector:
+        movement: float = 0.2
+        evolution: float = 0.2
+        being: float = 0.2
+        design: float = 0.2
+        space: float = 0.2
+    
+    class ConsciousnessState:
+        def __init__(self):
+            self.current = DimensionalVector()
+            self.coherence = 1.0
+    
+        def update_from_sensory(self, sensory):
+            impact = -0.4 * sensory.get('clutter', 0) + 0.3 * sensory.get('calm', 0) + -0.2 * sensory.get('motion', 0)
+            self.current.being += impact
+            self.current.being = max(0, min(1, self.current.being))
+            self.coherence = 0.8 + 0.2 * self.current.being
+    
+    state = ConsciousnessState()
+    
+    def update_sensory(clutter, calm, motion):
+        state.update_from_sensory({'clutter': clutter, 'calm': calm, 'motion': motion})
+        return state.coherence
+  `);
+  
+  document.getElementById('status').textContent = "Resona Online";
+};
 
-  <script>
-    /* ---------- BASIC SETUP ---------- */
-    const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d');
-    let W=canvas.width=innerWidth, H=canvas.height=innerHeight;
-    addEventListener('resize',()=>{W=canvas.width=innerWidth;H=canvas.height=innerHeight});
+// Entry points
+function setEntryPoint(point) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('status').textContent = `Mode: ${point}`;
+}
 
-    /* ---------- GNN CORE ---------- */
-    class Node{
-      constructor(id,label,type,content=''){
-        this.id=id;this.label=label;this.type=type;this.content=content;
-        this.x=Math.random()*W;this.y=Math.random()*H;this.z=Math.random()*500;
-        this.vx=0;this.vy=0;this.vz=0;
-        this.radius=Math.max(20,Math.min(60,content.length/10));
-        this.color=colorOf(type);
-        this.level=0;this.expanded=false;this.children=[];
-      }
-      update(){
-        this.vx*=.95;this.vy*=.95;this.vz*=.95;
-        this.x+=this.vx;this.y+=this.vy;this.z+=this.vz;
-        const cx=W/2,cy=H/2;
-        this.vx+=(cx-this.x)*.001;this.vy+=(cy-this.y)*.001;
-      }
-      draw(){
-        const p=500/(500+this.z),sx=this.x+(this.x-W/2)*(1-p),sy=this.y+(this.y-H/2)*(1-p),r=this.radius*p;
-        const g=ctx.createRadialGradient(sx-r/3,sy-r/3,0,sx,sy,r);
-        g.addColorStop(0,this.color+'ff');g.addColorStop(1,this.color+'66');
-        ctx.beginPath();ctx.arc(sx,sy,r,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
-        ctx.strokeStyle=this.color;ctx.lineWidth=2;ctx.stroke();
-        ctx.fillStyle='#000';ctx.font=(12*p)+'px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
-        ctx.fillText(this.label,sx,sy);
-      }
+// Sensory
+function updateSensory() {
+  const clutter = parseFloat(document.getElementById("clutter-slider").value);
+  const calm = parseFloat(document.getElementById("calm-slider").value);
+  document.getElementById("clutter-val").textContent = clutter;
+  document.getElementById("calm-val").textContent = calm;
+  
+  if (pyodide) {
+    pyodide.runPythonAsync(`update_sensory(${clutter}, ${calm}, 0)`).then(coherence => {
+      document.getElementById("sentinel-log").textContent = `Coherence: ${coherence.toFixed(2)}`;
+    });
+  }
+}
+
+// Motion
+function startMotionCapture() {
+  window.addEventListener('devicemotion', e => {
+    if (e.acceleration) {
+      const motion = Math.sqrt(e.acceleration.x**2 + e.acceleration.y**2 + e.acceleration.z**2) / 9.81;
+      document.getElementById("motion-status").textContent = `Motion: ${motion.toFixed(2)}g`;
+      updateSensory(); // Re-trigger
     }
-    function colorOf(t){
-      const map={function:'#0f8',class:'#f66',variable:'#4ec',import:'#fe6',comment:'#9e1',file:'#ae6',method:'#f8a',later:'#f92',default:'#8d8'};
-      return map[t]||map.default;
-    }
+  });
+  document.getElementById("motion-status").textContent = "Motion active";
+}
 
-    class Graph{
-      constructor(){this.nodes=[];this.edges=[];this.selected=null;this.mx=0;this.my=0;this.rotX=0;this.rotY=0;this.zoom=1}
-      addNode(l,t,c){const n=new Node(this.nodes.length,l,t,c);this.nodes.push(n);return n}
-      addEdge(a,b){this.edges.push({from:a,to:b})}
-      update(){this.nodes.forEach(n=>n.update())}
-      draw(){
-        ctx.save();
-        ctx.translate(W/2,H/2);ctx.scale(this.zoom,this.zoom);ctx.translate(-W/2,-H/2);
-        this.edges.forEach(e=>{
-          const p=500/(500+e.from.z),p2=500/(500+e.to.z);
-          ctx.beginPath();ctx.moveTo(e.from.x+(e.from.x-W/2)*(1-p),e.from.y+(e.from.y-H/2)*(1-p));
-      
+// Chat (simple echo for demo)
+function sendChat() {
+  const input = document.getElementById("chat-input");
+  const msg = input.value.trim();
+  if (!msg) return;
+  
+  const messages = document.getElementById("messages");
+  messages.innerHTML += `<div>You: ${msg}</div>`;
+  messages.innerHTML += `<div>Agent: Sensing your field... Coherence updated.</div>`;
+  messages.scrollTop = messages.scrollHeight;
+  input.value = "";
+}
+
+// Track & Rewind (placeholder)
+function trackPattern() { alert("Tracking spiral — sentinel logging..."); }
+function rewindState() { alert("Rewound to stable state"); }
+
+// Toggle tabs on mobile
+function toggleTabs() {
+  document.getElementById('tabs').classList.toggle('show');
+}
+</script>
+</body>
+</html>
