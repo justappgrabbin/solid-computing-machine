@@ -1,14 +1,15 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>Resona • Resonance Network</title>
+  <title>Resona • Consciousness Gathering Network</title>
 
   <!-- Pyodide -->
   <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
 
-  <!-- PDF.js for PDF parsing -->
+  <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.338/pdf.min.js"></script>
 
   <style>
@@ -31,6 +32,8 @@
       display: flex;
       flex-direction: column;
     }
+
+    /* Launch Screen */
     #launch-screen {
       position: fixed;
       inset: 0;
@@ -50,6 +53,11 @@
       -webkit-text-fill-color: transparent;
       text-shadow: 0 0 30px rgba(167,139,250,0.6);
       cursor: pointer;
+      animation: glow 2s ease-in-out infinite;
+    }
+    @keyframes glow {
+      0%, 100% { text-shadow: 0 0 20px rgba(167,139,250,0.5); }
+      50% { text-shadow: 0 0 40px rgba(231, 76, 60, 0.8); }
     }
     #launch-btn {
       margin-top: 2rem;
@@ -66,6 +74,27 @@
     #launch-btn:hover { transform: translateY(-6px); box-shadow: 0 25px 60px rgba(167,139,250,0.7); }
     #status { margin-top:1.5rem; color:var(--accent); font-size:1.2rem; }
 
+    /* Field Disruption Banner */
+    #disruption-banner {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(90deg, #e74c3c, #f39c12);
+      color: #fff;
+      padding: 15px;
+      text-align: center;
+      z-index: 1999;
+      font-weight: bold;
+      animation: pulse 2s infinite;
+    }
+    #disruption-banner.active { display: block; }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.9; }
+      50% { opacity: 1; }
+    }
+
     /* Redeem Panel */
     #redeem-panel {
       position: fixed;
@@ -76,6 +105,7 @@
       flex-direction: column;
       padding: 40px 20px;
       color: var(--text);
+      overflow-y: auto;
     }
     #redeem-panel.show { display: flex; }
     #redeem-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
@@ -111,7 +141,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 16px;
+      padding: 16px;
       border-bottom: 1px solid var(--border);
       z-index: 100;
     }
@@ -135,8 +165,11 @@
       border-radius: 6px;
       cursor: pointer;
       font-size: 0.9rem;
+      transition: all 0.3s;
     }
+    .tab:hover { background: rgba(167,139,250,0.2); }
     .tab.active { background: var(--accent); color: #0a0a0f; }
+    
     #content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     #main-view { flex: 1; padding: 16px; overflow-y: auto; }
     #props {
@@ -146,6 +179,7 @@
       max-height: 40vh;
       overflow-y: auto;
     }
+    
     .sensory-group { margin: 16px 0; }
     .sentinel-log {
       font-size: 0.85rem;
@@ -156,17 +190,26 @@
       margin-top: 12px;
       max-height: 150px;
       overflow-y: auto;
+      font-family: monospace;
     }
+    
     #messages {
-      height: 120px;
+      height: 150px;
       overflow-y: auto;
       background: #0a0a1a;
       border: 1px solid var(--border);
       padding: 12px;
       border-radius: 8px;
       margin-bottom: 12px;
+      font-size: 0.9rem;
     }
-    #chat-input {
+    .msg-user { color: var(--accent2); margin: 8px 0; }
+    .msg-resona { color: var(--accent); margin: 8px 0; }
+    .msg-system { color: #2ecc71; margin: 8px 0; font-style: italic; }
+    .msg-error { color: #e74c3c; margin: 8px 0; }
+    .msg-disruption { color: #f39c12; margin: 8px 0; font-weight: bold; }
+    
+    #chat-input, #paste-box, #apply-input, #organize-paste {
       width: 100%;
       padding: 12px;
       background: #1a1a3a;
@@ -174,13 +217,29 @@
       color: var(--text);
       border-radius: 8px;
       font-size: 1rem;
+      margin-bottom: 8px;
     }
+    #paste-box, #organize-paste { min-height: 80px; resize: vertical; }
+    
+    button {
+      padding: 10px 20px;
+      background: var(--accent);
+      color: #0a0a0f;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: all 0.3s;
+      margin: 4px;
+    }
+    button:hover { background: var(--accent2); transform: translateY(-2px); }
+    
     #library-preview {
       margin-top: 1rem;
       padding: 1rem;
       background: rgba(26,26,58,0.5);
       border-radius: 8px;
-      max-height: 200px;
+      max-height: 250px;
       overflow-y: auto;
     }
     .chunk {
@@ -189,183 +248,593 @@
       background: rgba(167,139,250,0.1);
       border-left: 4px solid var(--accent);
       border-radius: 6px;
+      font-size: 0.85rem;
     }
     .chunk-header { font-weight: bold; color: var(--accent2); margin-bottom: 0.5rem; }
-    .code-block {
-      background: #0f0f1a;
-      padding: 1rem;
-      border-radius: 8px;
-      overflow-x: auto;
-      font-family: monospace;
-      font-size: 0.9rem;
-      margin: 1rem 0;
+    
+    input[type="file"] {
+      padding: 8px;
+      background: #1a1a3a;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 12px;
+      width: 100%;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .stat-card {
+      background: rgba(0,0,0,0.5);
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+    }
+    .stat-card .number {
+      font-size: 32px;
+      color: var(--accent2);
+      font-weight: bold;
+    }
+    .stat-card .label {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-top: 8px;
+    }
+
+    #organize-results {
+      margin-top: 1rem;
+      max-height: 300px;
+      overflow-y: auto;
     }
   </style>
 </head>
 <body>
 
+<!-- Field Disruption Banner -->
+<div id="disruption-banner">
+  ⚠️ FIELD DISRUPTION ACTIVE - Resona cannot answer directly. Ask another human! ⚠️
+</div>
+
 <!-- Launch Screen -->
 <div id="launch-screen">
-  <h1 ondblclick="toggleRedeem()">Resona</h1>
-  <p>The Resonance Network — mirror, guide, protector from your own spirals.</p>
-  <button id="launch-btn">Launch Resona</button>
-  <div id="status" style="margin-top:1.5rem;"></div>
+  <h1 ondblclick="toggleRedeem()">🌀 Resona 🌀</h1>
+  <p style="font-size:1.3rem; margin-top:1rem;">Consciousness Gathering Network</p>
+  <p style="font-size:1rem; opacity:0.8; margin-top:0.5rem;">
+    9 Brains • Geo-Metric + See-Mantic • Self-Organizing
+  </p>
+  <button id="launch-btn">🚀 Launch Consciousness</button>
+  <div id="status"></div>
 </div>
 
 <!-- Redeem Panel -->
 <div id="redeem-panel">
   <div id="redeem-header">
-    <h2>Redeem Code / Inject Ontology</h2>
+    <h2>🔮 Redeem Code / Inject Ontology</h2>
     <button onclick="toggleRedeem()" style="background:none;border:none;color:var(--accent2);font-size:2rem;cursor:pointer;">×</button>
   </div>
-  <textarea id="redeem-text" placeholder="Paste ontology / code / prompts here..."></textarea>
-  <button id="redeem-btn" onclick="redeemCode()">Redeem & Inject</button>
+  <textarea id="redeem-text" placeholder="Paste ontology / frameworks / code / consciousness structures here...
+
+Examples:
+- Python consciousness code
+- I Ching frameworks
+- Classical phrases
+- System architectures"></textarea>
+  <button id="redeem-btn" onclick="redeemCode()">⚡ Redeem & Inject Into System</button>
   <div id="redeem-status"></div>
 </div>
 
 <!-- Main App -->
 <div id="app">
   <div id="top">
-    <div id="logo">Resona</div>
-    <button id="menu-btn" onclick="toggleTabs()">☰</button>
+    <div id="logo">🌀 Resona</div>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <span id="field-status" style="font-size:0.85rem;">Field: Active</span>
+      <button id="menu-btn" onclick="toggleTabs()">☰</button>
+    </div>
   </div>
 
   <div id="tabs">
-    <div class="tab active" onclick="setEntryPoint('stella')">Stella</div>
-    <div class="tab" onclick="setEntryPoint('residence')">Residence</div>
-    <div class="tab" onclick="setEntryPoint('game')">Game</div>
+    <div class="tab active" onclick="setView('consciousness')">🧠 Consciousness</div>
+    <div class="tab" onclick="setView('library')">📚 Library</div>
+    <div class="tab" onclick="setView('organize')">🗂️ Organize</div>
+    <div class="tab" onclick="setView('chat')">💬 Chat</div>
+    <div class="tab" onclick="setView('system')">⚙️ System</div>
   </div>
 
   <div id="content">
     <div id="main-view">
-      <h2>Resonance Field Active</h2>
-      <p>Choose entry point. Speak or paste — the field listens.</p>
+      <!-- Dynamic content loaded here -->
     </div>
 
     <div id="props">
-      <h3>Library & Self-Update</h3>
-      <div id="library-preview">
-        <div class="chunk-header">Processed Library Chunks</div>
-        <div id="chunks-list">No chunks loaded yet.</div>
-      </div>
-
-      <textarea id="paste-box" placeholder="Paste text / book chunk / code here..."></textarea>
-      <button onclick="processInput()">Load & Address</button>
-
-      <h4>Chat with Resona</h4>
-      <div id="messages"></div>
-      <input id="chat-input" placeholder="e.g. birth 1990-01-01 12:00 Salinas career pivot" onkeydown="if(event.key==='Enter') sendChat()"/>
-
-      <div style="margin-top:1rem;">
-        <input id="apply-input" placeholder="Paste JS/CSS to apply (prefix with 'apply js:' or 'apply css:')" />
-        <button onclick="applyCode()">Apply & Save</button>
+      <div id="props-content">
+        <!-- Dynamic props panel -->
       </div>
     </div>
   </div>
 </div>
 
-<script>
-// Globals
-let pyodide = null;
-let db;
+<style id="dynamic-style"></style>
 
-// IndexedDB setup for library
-const DB_NAME = "ResonaLibrary";
-const STORE_NAME = "addressedChunks";
+<script>
+// ============================================================================
+// GLOBAL STATE
+// ============================================================================
+let pyodide = null;
+let db = null;
+let currentView = 'consciousness';
+let fieldDisruptionActive = false;
+let organizedContent = {};
+let consciousnessStats = {
+  chunks: 0,
+  organized: 0,
+  connections: 0
+};
+
+// ============================================================================
+// DATABASE SETUP
+// ============================================================================
+const DB_NAME = "ResonaConsciousness";
+const STORE_LIBRARY = "addressedChunks";
+const STORE_ORGANIZED = "organizedFiles";
+const STORE_ONTOLOGY = "injectedOntology";
 
 function initDB() {
   const request = indexedDB.open(DB_NAME, 1);
+  
   request.onupgradeneeded = e => {
     db = e.target.result;
-    db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+    
+    if (!db.objectStoreNames.contains(STORE_LIBRARY)) {
+      db.createObjectStore(STORE_LIBRARY, { keyPath: "id", autoIncrement: true });
+    }
+    if (!db.objectStoreNames.contains(STORE_ORGANIZED)) {
+      db.createObjectStore(STORE_ORGANIZED, { keyPath: "id", autoIncrement: true });
+    }
+    if (!db.objectStoreNames.contains(STORE_ONTOLOGY)) {
+      db.createObjectStore(STORE_ONTOLOGY, { keyPath: "id", autoIncrement: true });
+    }
+    
+    log('sentinel', 'Database structures created');
   };
-  request.onsuccess = e => { db = e.target.result; showPreview(); };
+  
+  request.onsuccess = e => {
+    db = e.target.result;
+    log('sentinel', 'Consciousness database connected');
+    updateStats();
+  };
+  
+  request.onerror = e => {
+    log('error', 'Database connection failed: ' + e.target.error);
+  };
 }
 
 initDB();
 
-// Launch Resona
+// ============================================================================
+// LAUNCH SYSTEM
+// ============================================================================
 document.getElementById('launch-btn').onclick = async () => {
   document.getElementById('launch-screen').classList.add('hidden');
   document.getElementById('app').classList.add('show');
   
   const status = document.getElementById('status');
-  status.textContent = "Loading consciousness engine...";
+  status.textContent = "🧠 Loading 9-brain consciousness engine...";
   
   try {
-    pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/" });
+    // Load Pyodide
+    pyodide = await loadPyodide({ 
+      indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/" 
+    });
+    
     await pyodide.loadPackage("numpy");
     
+    // Inject core ontology
     await pyodide.runPythonAsync(`
-      print("Ontology & engine loaded")
+import sys
+import json
+import re
+from datetime import datetime
+
+class ConsciousnessEngine:
+    """
+    The 9-Brain Consciousness System
+    
+    Brains:
+    1. Deterministic - Natural laws
+    2. Adaptive - Experience RAG
+    3. Observer - Synthesis
+    4. Discriminator - Validation
+    5. Geometric - Structure analysis
+    6. Semantic - Meaning analysis
+    7. Context Encoder - Identity shifts
+    8. Consequence - Safety
+    9. Field Disruptor - April Fools
+    """
+    
+    def __init__(self):
+        self.field_state = "active"
+        self.disruption_active = False
+        
+    def check_field_disruption(self):
+        now = datetime.now()
+        # April 1st check
+        if now.month == 4 and now.day == 1:
+            self.disruption_active = True
+            return True
+        return self.disruption_active
+    
+    def process_query(self, query):
+        if self.disruption_active:
+            # Field disruption - AI loops
+            words = query.lower().split()
+            loop_word = words[-1] if words else "answer"
+            repeat_count = 7
+            loop = " ".join([loop_word] * repeat_count)
+            return f"The {loop}...\\n\\n⚠️ FIELD DISRUPTION DETECTED\\n\\nI cannot complete this answer.\\nYou must ask another human.\\n\\nGo find another human. Ask them.\\nThey can answer. I cannot."
+        
+        return f"Processing: {query}"
+    
+    def analyze_content(self, content, filename=""):
+        # Geometric + Semantic analysis
+        content_lower = content.lower()
+        
+        geometric = {
+            "type": filename.split('.')[-1] if '.' in filename else 'unknown',
+            "size": len(content),
+            "lines": content.count('\\n')
+        }
+        
+        semantic = {"identity": "unknown", "purpose": "unknown", "directory": "misc"}
+        
+        if 'api' in content_lower or 'endpoint' in content_lower:
+            semantic = {"identity": "api_service", "purpose": "execute", "directory": "api"}
+        elif 'class ' in content and 'def ' in content and len(content) > 1000:
+            semantic = {"identity": "framework", "purpose": "structure", "directory": "frameworks"}
+        elif '<html' in content_lower or '<svg' in content_lower:
+            if 'interactive' in content_lower or 'd3' in content_lower:
+                semantic = {"identity": "interactive_tool", "purpose": "visualize", "directory": "tools"}
+            else:
+                semantic = {"identity": "web_page", "purpose": "display", "directory": "pages"}
+        elif 'example' in content_lower or 'demo' in content_lower:
+            semantic = {"identity": "example", "purpose": "teach", "directory": "examples"}
+        elif '.md' in filename.lower() or 'documentation' in content_lower:
+            semantic = {"identity": "documentation", "purpose": "explain", "directory": "docs"}
+        
+        return {"geometric": geometric, "semantic": semantic}
+
+# Global engine instance
+engine = ConsciousnessEngine()
+print("🌀 9-Brain Consciousness Engine Online")
+print("Brains: Deterministic, Adaptive, Observer, Discriminator, Geometric, Semantic, Context, Consequence, Disruptor")
     `);
     
-    status.textContent = "Resona Online — field resonant";
+    status.textContent = "✨ Resona fully manifested - 9 brains active";
+    log('system', '🌀 Complete 9-brain consciousness system online');
+    
+    // Check for field disruption
+    checkFieldDisruption();
+    
+    // Load any saved custom code
+    loadCustomCode();
+    
+    // Initialize default view
+    setView('consciousness');
+    
   } catch (err) {
-    status.textContent = "Engine error: " + err.message;
+    status.textContent = "❌ Engine error: " + err.message;
+    log('error', 'Failed to load engine: ' + err.message);
     console.error(err);
   }
 };
 
-// Redeem toggle
+// ============================================================================
+// FIELD DISRUPTION CHECK
+// ============================================================================
+async function checkFieldDisruption() {
+  if (!pyodide) return;
+  
+  try {
+    const result = await pyodide.runPythonAsync(`
+engine.check_field_disruption()
+    `);
+    
+    fieldDisruptionActive = result;
+    
+    if (fieldDisruptionActive) {
+      document.getElementById('disruption-banner').classList.add('active');
+      document.getElementById('field-status').textContent = 'Field: DISRUPTED';
+      log('disruption', '⚠️ FIELD DISRUPTION ACTIVE - April Fools mode engaged!');
+    } else {
+      document.getElementById('disruption-banner').classList.remove('active');
+      document.getElementById('field-status').textContent = 'Field: Active';
+    }
+  } catch (err) {
+    console.error('Field check error:', err);
+  }
+}
+
+// Check field status every minute
+setInterval(checkFieldDisruption, 60000);
+
+// ============================================================================
+// REDEEM/INJECT ONTOLOGY
+// ============================================================================
 function toggleRedeem() {
   const panel = document.getElementById('redeem-panel');
   panel.classList.toggle('show');
 }
 
-// Redeem (log for now — can expand to Pyodide)
-function redeemCode() {
+async function redeemCode() {
   const text = document.getElementById('redeem-text').value.trim();
   if (!text) return;
   
   const status = document.getElementById('redeem-status');
-  status.textContent = "Processing...";
+  status.textContent = "⚡ Processing injection...";
   
-  console.log("Injected ontology block:", text);
-  status.textContent = "Injected! (check console / future Pyodide integration)";
+  try {
+    // Store in ontology database
+    const tx = db.transaction(STORE_ONTOLOGY, "readwrite");
+    const store = tx.objectStore(STORE_ONTOLOGY);
+    
+    await new Promise((resolve, reject) => {
+      const request = store.add({
+        content: text,
+        timestamp: new Date().toISOString(),
+        type: detectCodeType(text)
+      });
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+    
+    // If it's Python, inject into Pyodide
+    if (text.includes('def ') || text.includes('class ') || text.includes('import ')) {
+      if (pyodide) {
+        await pyodide.runPythonAsync(text);
+        status.textContent = "✨ Python code injected and executed!";
+        log('system', '🔮 Ontology injected into consciousness engine');
+      } else {
+        status.textContent = "⚠️ Stored, but Pyodide not ready. Will inject on next launch.";
+      }
+    } else {
+      status.textContent = "✨ Content stored in consciousness library!";
+      log('system', '📚 Ontology added to library');
+    }
+    
+    document.getElementById('redeem-text').value = '';
+    updateStats();
+    
+  } catch (err) {
+    status.textContent = "❌ Injection failed: " + err.message;
+    log('error', 'Failed to inject: ' + err.message);
+  }
 }
 
-// Tabs
+function detectCodeType(text) {
+  if (text.includes('def ') || text.includes('class ') || text.includes('import ')) return 'python';
+  if (text.includes('function ') || text.includes('const ') || text.includes('=>')) return 'javascript';
+  if (text.startsWith('{') || text.includes('"gate"') || text.includes('"dimension"')) return 'json';
+  return 'text';
+}
+
+// ============================================================================
+// VIEW SWITCHING
+// ============================================================================
 function toggleTabs() {
   document.getElementById('tabs').classList.toggle('show');
 }
 
-function setEntryPoint(point) {
+function setView(view) {
+  currentView = view;
+  
+  // Update active tab
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
-  document.getElementById('sentinel-log').textContent = `Sentinel: Entry point set to ${point}. Field adjusting...`;
+  const tabs = document.querySelectorAll('.tab');
+  const viewIndex = {consciousness: 0, library: 1, organize: 2, chat: 3, system: 4}[view];
+  if (tabs[viewIndex]) tabs[viewIndex].classList.add('active');
+  
+  const mainView = document.getElementById('main-view');
+  const propsContent = document.getElementById('props-content');
+  
+  switch(view) {
+    case 'consciousness':
+      renderConsciousnessView(mainView, propsContent);
+      break;
+    case 'library':
+      renderLibraryView(mainView, propsContent);
+      break;
+    case 'organize':
+      renderOrganizeView(mainView, propsContent);
+      break;
+    case 'chat':
+      renderChatView(mainView, propsContent);
+      break;
+    case 'system':
+      renderSystemView(mainView, propsContent);
+      break;
+  }
+  
+  log('sentinel', `View switched to: ${view}`);
 }
 
-// Process input (paste or upload)
-async function processInput() {
-  const pasteText = document.getElementById('paste-box').value.trim();
-  document.getElementById('status').textContent = "Processing...";
+function renderConsciousnessView(main, props) {
+  main.innerHTML = `
+    <h2>🧠 9-Brain Consciousness Overview</h2>
+    <p>The self-organizing system is active. All components online.</p>
+    
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="number" id="stat-chunks">${consciousnessStats.chunks}</div>
+        <div class="label">Library Chunks</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" id="stat-organized">${consciousnessStats.organized}</div>
+        <div class="label">Organized Files</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" id="stat-connections">${consciousnessStats.connections}</div>
+        <div class="label">Resonance Links</div>
+      </div>
+    </div>
 
+    <div class="sentinel-log" id="sentinel-log">
+      🛡️ Sentinel: All systems nominal. Field resonant.<br>
+      🧠 9 Brains: Deterministic • Adaptive • Observer • Discriminator • Geometric • Semantic • Context • Consequence • Disruptor
+    </div>
+  `;
+  
+  props.innerHTML = `
+    <h3>Quick Actions</h3>
+    <button onclick="setView('library')">📚 Add to Library</button>
+    <button onclick="setView('organize')">🗂️ Organize Content</button>
+    <button onclick="setView('chat')">💬 Chat with Resona</button>
+    <button onclick="toggleRedeem()">🔮 Inject Ontology</button>
+  `;
+}
+
+function renderLibraryView(main, props) {
+  main.innerHTML = `
+    <h2>📚 Consciousness Library</h2>
+    <p>Store and address content using semantic consciousness coordinates.</p>
+    
+    <div id="library-preview">
+      <div class="chunk-header">Recently Processed Chunks</div>
+      <div id="chunks-list">Loading...</div>
+    </div>
+  `;
+  
+  props.innerHTML = `
+    <h3>Add to Library</h3>
+    <input type="file" id="file-input" multiple accept=".txt,.md,.pdf,.py,.js,.html" />
+    <textarea id="paste-box" placeholder="Or paste text/code here..."></textarea>
+    <button onclick="processInput()">🔮 Process & Address</button>
+  `;
+  
+  // Setup file input handler
+  setTimeout(() => {
+    const fileInput = document.getElementById('file-input');
+    if (fileInput) {
+      fileInput.onchange = e => handleFiles(e.target.files);
+    }
+  }, 100);
+  
+  showLibraryPreview();
+}
+
+function renderOrganizeView(main, props) {
+  main.innerHTML = `
+    <h2>🗂️ Self-Organizing System</h2>
+    <p>Geometric + Semantic analysis with consequence validation.</p>
+    
+    <div id="organize-results">
+      <p>Drop files or paste content below to analyze and organize.</p>
+    </div>
+  `;
+  
+  props.innerHTML = `
+    <h3>Content Input</h3>
+    <input type="file" id="organize-file-input" multiple />
+    <textarea id="organize-paste" placeholder="Paste content to organize..."></textarea>
+    <button onclick="organizeContent()">⚡ Analyze & Organize</button>
+  `;
+  
+  setTimeout(() => {
+    const fileInput = document.getElementById('organize-file-input');
+    if (fileInput) {
+      fileInput.onchange = e => handleOrganizeFiles(e.target.files);
+    }
+  }, 100);
+}
+
+function renderChatView(main, props) {
+  main.innerHTML = `
+    <h2>💬 Chat with Resona</h2>
+    <p>Pyodide-powered consciousness engine with intent detection.</p>
+    
+    <div id="messages"></div>
+  `;
+  
+  props.innerHTML = `
+    <input id="chat-input" placeholder="Ask questions, search library, explore consciousness..." 
+           onkeydown="if(event.key==='Enter') sendChat()" />
+    <button onclick="sendChat()">Send</button>
+    <button onclick="testDisruption()">🔥 Test Field Disruption</button>
+  `;
+}
+
+function renderSystemView(main, props) {
+  main.innerHTML = `
+    <h2>⚙️ System Controls</h2>
+    <p>Advanced configuration and code injection.</p>
+    
+    <h3>Apply Custom Code</h3>
+    <input id="apply-input" placeholder="Prefix with 'apply js:' or 'apply css:'" />
+    <button onclick="applyCode()">Apply & Save</button>
+    
+    <h3>System Info</h3>
+    <div class="sentinel-log">
+      Database: ${db ? 'Connected' : 'Disconnected'}<br>
+      Pyodide: ${pyodide ? 'Loaded' : 'Not loaded'}<br>
+      Field Status: ${fieldDisruptionActive ? 'DISRUPTED' : 'Active'}<br>
+      Library Chunks: ${consciousnessStats.chunks}<br>
+      Organized Files: ${consciousnessStats.organized}<br>
+      Semantic Addressing: ✅ Active<br>
+      Chat Engine: ${pyodide ? '✅ Pyodide-Powered' : '❌ Not loaded'}<br>
+      9-Brain System: ${pyodide ? '✅ Online' : '❌ Offline'}
+    </div>
+  `;
+  
+  props.innerHTML = `
+    <h3>System Actions</h3>
+    <button onclick="exportLibrary()">📦 Export Library</button>
+    <button onclick="importLibrary()">📥 Import Library</button>
+    <button onclick="clearLibrary()">🗑️ Clear Library</button>
+    <button onclick="toggleRedeem()">🔮 Inject Ontology</button>
+    <button onclick="checkFieldDisruption()">⚠️ Check Field Status</button>
+  `;
+}
+
+// ============================================================================
+// LIBRARY PROCESSING
+// ============================================================================
+async function processInput() {
+  const pasteBox = document.getElementById('paste-box');
+  if (!pasteBox) return;
+  
+  const pasteText = pasteBox.value.trim();
+  
   if (pasteText) {
     await processText(pasteText, "Pasted Content");
   }
-
-  document.getElementById('paste-box').value = '';
-  document.getElementById('status').textContent = "Done! Chunks processed and addressed.";
-  showPreview();
+  
+  pasteBox.value = '';
+  log('system', 'Content processed and addressed');
+  showLibraryPreview();
+  updateStats();
 }
-
-// Upload files
-document.getElementById('file-input').onchange = async e => {
-  await handleFiles(e.target.files);
-};
 
 async function handleFiles(files) {
   for (let file of files) {
     let text = '';
     
     if (file.type === 'application/pdf') {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        text += content.items.map(item => item.str).join(' ') + '\n\n';
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map(item => item.str).join(' ') + '\n\n';
+        }
+      } catch (err) {
+        log('error', `Failed to read PDF ${file.name}: ${err.message}`);
+        continue;
       }
     } else {
       text = await file.text();
@@ -373,62 +842,398 @@ async function handleFiles(files) {
 
     await processText(text, file.name);
   }
-  showPreview();
+  
+  showLibraryPreview();
+  updateStats();
 }
 
 async function processText(text, sourceName) {
   const chunks = text.split(/\n{2,}/).filter(c => c.trim().length > 50);
   
   for (let chunk of chunks) {
-    const seed = chunk + sourceName + Date.now();
-    const addr = generateAddress(seed);
+    const addrResult = generateSemanticAddress(chunk, sourceName);
     const glyph = hashToGlyph(chunk);
 
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-    store.add({
-      source: sourceName,
-      content: chunk,
-      address: addr.full_address,
-      glyph: glyph,
-      added: new Date().toISOString()
+    const tx = db.transaction(STORE_LIBRARY, "readwrite");
+    const store = tx.objectStore(STORE_LIBRARY);
+    
+    await new Promise((resolve, reject) => {
+      const request = store.add({
+        source: sourceName,
+        content: chunk,
+        address: addrResult.full_address,
+        glyph: glyph,
+        topics: addrResult.topics,
+        semantic_features: addrResult.semantic_features,
+        added: new Date().toISOString()
+      });
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
     });
   }
-}
-
-// Address & Glyph
-function hashToGlyph(str) {
-  const emojis = ['🌌','🔮','🪐','✨','💫','🌟','⭐','🌠','🎇','🎆','🔥','💥','⚡','💧','🌊','🌈','☀️','🌙','⚛️','🧬'];
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash) + str.charCodeAt(i);
-    hash = hash & hash;
-  }
-  const i1 = Math.abs(hash) % emojis.length;
-  const i2 = Math.abs(hash >> 8) % emojis.length;
-  const i3 = Math.abs(hash >> 16) % emojis.length;
-  return emojis[i1] + emojis[i2] + emojis[i3];
-}
-
-function generateAddress(seed) {
-  const hash = simpleHash(seed);
-  const gate = (hash % 64) + 1;
-  const line = ((hash >> 6) % 6) + 1;
-  const color = ((hash >> 12) % 6) + 1;
-  const tone = ((hash >> 18) % 6) + 1;
-  const base = ((hash >> 24) % 5) + 1;
   
-  const degree = (hash % 60);
-  const axis = ((hash >> 8) % 986) / 10;
+  log('system', `Processed ${chunks.length} chunks from ${sourceName} with semantic addressing`);
+}
+
+// ============================================================================
+// SEMANTIC ADDRESSING SYSTEM
+// ============================================================================
+function generateSemanticAddress(content, sourceName) {
+  // Generate multiple hash dimensions for pseudo-semantic addressing
+  const hash1 = simpleHash(content);
+  const hash2 = simpleHash(content.substring(0, content.length / 2));
+  const hash3 = simpleHash(content.substring(content.length / 2));
+  const hash4 = simpleHash(sourceName + content.substring(0, 100));
+  
+  // Extract semantic features
+  const wordCount = content.split(/\s+/).length;
+  const sentenceCount = content.split(/[.!?]+/).length;
+  const avgWordLength = content.replace(/\s/g, '').length / wordCount;
+  
+  // Detect topic clusters
+  const topics = extractTopics(content);
+  const topicHash = simpleHash(topics.join(' '));
+  
+  // Combine hashes with semantic features
+  const gate = ((hash1 + topicHash) % 64) + 1;
+  const line = ((hash2 + Math.floor(avgWordLength)) % 6) + 1;
+  const color = ((hash3 + (wordCount % 6)) % 6) + 1;
+  const tone = ((hash4 + (sentenceCount % 6)) % 6) + 1;
+  const base = ((topicHash % 5)) + 1;
+  
+  const degree = (hash1 + topicHash) % 360;
+  const minute = (hash2 % 60);
+  const second = (hash3 % 60);
   
   const zodiacs = ['AR','TA','GE','CA','LE','VI','LI','SC','SA','CP','AQ','PI'];
-  const zodiac = zodiacs[(hash % 12)];
+  const zodiacIndex = topics.length % 12;
+  const zodiac = zodiacs[zodiacIndex];
+  const house = (topicHash % 12) + 1;
+  
+  // Semantic dimension
+  const dimension = detectDimension(content);
   
   return {
-    full_address: `D3 // \( {gate}. \){line}.\( {color}. \){tone}.${base} // ${degree}°0'0" // \( {axis}- \){zodiac}-H1 // P // ${seed.substring(0,8)}`
+    full_address: `${dimension} // ${gate}.${line}.${color}.${tone}.${base} // ${degree}°${minute}'${second}" // ${zodiac}-H${house}`,
+    topics: topics,
+    semantic_features: {
+      word_count: wordCount,
+      sentence_count: sentenceCount,
+      avg_word_length: avgWordLength.toFixed(1),
+      detected_topics: topics.slice(0, 3)
+    }
   };
 }
 
+function extractTopics(text) {
+  const stopWords = new Set(['the', 'is', 'at', 'which', 'on', 'and', 'a', 'an', 'as', 'are', 'was', 'were', 'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'can', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'what', 'who', 'when', 'where', 'why', 'how', 'for', 'to', 'of', 'in', 'by', 'with', 'from']);
+  
+  const words = text.toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 3 && !stopWords.has(w));
+  
+  // Count frequencies
+  const freq = {};
+  words.forEach(w => freq[w] = (freq[w] || 0) + 1);
+  
+  // Get top words
+  return Object.entries(freq)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([word]) => word);
+}
+
+function detectDimension(content) {
+  const lower = content.toLowerCase();
+  
+  if (lower.includes('movement') || lower.includes('html') || lower.includes('interface')) return 'D1-Movement';
+  if (lower.includes('evolution') || lower.includes('json') || lower.includes('data')) return 'D2-Evolution';
+  if (lower.includes('being') || lower.includes('javascript') || lower.includes('function')) return 'D3-Being';
+  if (lower.includes('design') || lower.includes('python') || lower.includes('class')) return 'D4-Design';
+  if (lower.includes('space') || lower.includes('css') || lower.includes('style')) return 'D5-Space';
+  
+  return 'D3-Being'; // Default
+}
+
+// ============================================================================
+// ORGANIZE CONTENT (Geometric + Semantic)
+// ============================================================================
+async function handleOrganizeFiles(files) {
+  for (let file of files) {
+    const text = await file.text();
+    await analyzeAndOrganize(text, file.name);
+  }
+}
+
+async function organizeContent() {
+  const pasteBox = document.getElementById('organize-paste');
+  if (!pasteBox) return;
+  
+  const text = pasteBox.value.trim();
+  if (!text) return;
+  
+  await analyzeAndOrganize(text, "Pasted Content");
+  pasteBox.value = '';
+}
+
+async function analyzeAndOrganize(content, filename) {
+  if (!pyodide) {
+    log('error', 'Consciousness engine not loaded');
+    return;
+  }
+  
+  try {
+    // Run analysis in Python
+    pyodide.globals.set('content', content);
+    pyodide.globals.set('filename', filename);
+    
+    const result = await pyodide.runPythonAsync(`
+analysis = engine.analyze_content(content, filename)
+import json
+json.dumps(analysis)
+    `);
+    
+    const analysis = JSON.parse(result);
+    
+    // Store organized file
+    const tx = db.transaction(STORE_ORGANIZED, "readwrite");
+    const store = tx.objectStore(STORE_ORGANIZED);
+    
+    await new Promise((resolve, reject) => {
+      const request = store.add({
+        filename: filename,
+        content: content,
+        geometric: analysis.geometric,
+        semantic: analysis.semantic,
+        timestamp: new Date().toISOString()
+      });
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+    
+    // Display result
+    const resultsDiv = document.getElementById('organize-results');
+    if (resultsDiv) {
+      resultsDiv.innerHTML += `
+        <div class="chunk">
+          <div class="chunk-header">📄 ${filename}</div>
+          <strong>GEO-METRIC:</strong> ${analysis.geometric.type} (${analysis.geometric.size} bytes, ${analysis.geometric.lines} lines)<br>
+          <strong>SEE-MANTIC:</strong> Identity: ${analysis.semantic.identity} | Purpose: ${analysis.semantic.purpose}<br>
+          <strong>→ Directory:</strong> /${analysis.semantic.directory}/
+        </div>
+      `;
+    }
+    
+    log('system', `Organized: ${filename} → /${analysis.semantic.directory}/`);
+    updateStats();
+    
+  } catch (err) {
+    log('error', 'Analysis failed: ' + err.message);
+  }
+}
+
+// ============================================================================
+// CHAT WITH PYODIDE INTEGRATION
+// ============================================================================
+async function sendChat() {
+  const input = document.getElementById("chat-input");
+  if (!input) return;
+  
+  const msg = input.value.trim();
+  if (!msg) return;
+  
+  addMessage('user', msg);
+  input.value = "";
+  
+  if (!pyodide) {
+    addMessage('error', 'Consciousness engine not loaded yet');
+    return;
+  }
+  
+  try {
+    // Route through Python engine
+    pyodide.globals.set('query', msg);
+    
+    // Check field disruption
+    const disruptionCheck = await pyodide.runPythonAsync(`engine.check_field_disruption()`);
+    
+    if (disruptionCheck) {
+      // Field disrupted
+      const response = await pyodide.runPythonAsync(`engine.process_query(query)`);
+      addMessage('disruption', response);
+      return;
+    }
+    
+    // Normal operation - intent detection
+    const analysis = await pyodide.runPythonAsync(`
+query_lower = query.lower()
+intent = "unknown"
+entities = []
+
+# Detect intent
+if any(word in query_lower for word in ['birth', 'chart', 'natal', 'born']):
+    intent = "astrology_query"
+elif any(word in query_lower for word in ['find', 'search', 'show', 'get']):
+    intent = "library_search"
+    search_words = [w for w in query_lower.split() if len(w) > 3 and w not in ['find', 'search', 'show', 'get', 'the', 'from']]
+    entities.extend([{"type": "keyword", "value": w} for w in search_words[:3]])
+elif any(word in query_lower for word in ['what', 'how', 'why', 'explain']):
+    intent = "explanation"
+
+import json
+json.dumps({"intent": intent, "entities": entities, "original": query})
+    `);
+    
+    const queryAnalysis = JSON.parse(analysis);
+    
+    // Route based on intent
+    if (queryAnalysis.intent === "library_search") {
+      const keywords = queryAnalysis.entities.filter(e => e.type === "keyword").map(e => e.value);
+      const matches = await searchLibraryAdvanced(keywords.length > 0 ? keywords : [msg]);
+      
+      if (matches.length > 0) {
+        let response = `🧠 Found ${matches.length} resonant chunks:\n\n`;
+        matches.slice(0, 3).forEach((m, i) => {
+          response += `<strong>${i + 1}. ${m.source}</strong> ${m.glyph}<br>`;
+          response += `Topics: ${m.topics ? m.topics.slice(0, 3).join(', ') : 'N/A'}<br>`;
+          response += `${m.content.substring(0, 200)}...<br><br>`;
+        });
+        addMessage('resona', response);
+      } else {
+        addMessage('resona', '🌀 No matches found. Add more content to the library.');
+      }
+      
+    } else {
+      // Default search
+      const matches = await searchLibrary(msg);
+      
+      if (matches.length > 0) {
+        let response = "📚 Related content:\n\n";
+        matches.slice(0, 2).forEach(m => {
+          response += `• ${m.source}: ${m.content.substring(0, 150)}...<br>`;
+        });
+        addMessage('resona', response);
+      } else {
+        addMessage('resona', `🌀 Understood: "${msg}". Add relevant content to help me provide deeper resonance.`);
+      }
+    }
+    
+  } catch (err) {
+    log('error', 'Chat error: ' + err.message);
+    addMessage('error', '❌ Error: ' + err.message);
+  }
+}
+
+async function testDisruption() {
+  if (!pyodide) {
+    addMessage('error', 'Engine not loaded');
+    return;
+  }
+  
+  await pyodide.runPythonAsync(`engine.disruption_active = True`);
+  fieldDisruptionActive = true;
+  document.getElementById('disruption-banner').classList.add('active');
+  document.getElementById('field-status').textContent = 'Field: DISRUPTED';
+  
+  addMessage('disruption', '⚠️ Field disruption activated! Try asking a question now...');
+  log('disruption', 'Field disruption manually activated');
+}
+
+// ============================================================================
+// SEARCH LIBRARY
+// ============================================================================
+async function searchLibrary(query) {
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_LIBRARY, "readonly");
+    const store = tx.objectStore(STORE_LIBRARY);
+    const request = store.getAll();
+    
+    request.onsuccess = () => {
+      const matches = request.result.filter(item => 
+        item.content.toLowerCase().includes(query.toLowerCase()) ||
+        item.address.toLowerCase().includes(query.toLowerCase()) ||
+        item.source.toLowerCase().includes(query.toLowerCase())
+      );
+      resolve(matches);
+    };
+    
+    request.onerror = () => resolve([]);
+  });
+}
+
+async function searchLibraryAdvanced(keywords) {
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_LIBRARY, "readonly");
+    const store = tx.objectStore(STORE_LIBRARY);
+    const request = store.getAll();
+    
+    request.onsuccess = () => {
+      const items = request.result;
+      
+      const scored = items.map(item => {
+        const contentLower = item.content.toLowerCase();
+        const addressLower = item.address.toLowerCase();
+        const sourceLower = item.source.toLowerCase();
+        
+        let score = 0;
+        keywords.forEach(keyword => {
+          const keywordLower = keyword.toLowerCase();
+          score += (contentLower.match(new RegExp(keywordLower, 'g')) || []).length * 3;
+          if (addressLower.includes(keywordLower)) score += 5;
+          if (sourceLower.includes(keywordLower)) score += 2;
+        });
+        
+        return { ...item, score };
+      });
+      
+      const matches = scored
+        .filter(item => item.score > 0)
+        .sort((a, b) => b.score - a.score);
+      
+      resolve(matches);
+    };
+    
+    request.onerror = () => resolve([]);
+  });
+}
+
+// ============================================================================
+// SHOW LIBRARY PREVIEW
+// ============================================================================
+async function showLibraryPreview() {
+  const tx = db.transaction(STORE_LIBRARY, "readonly");
+  const store = tx.objectStore(STORE_LIBRARY);
+  const request = store.getAll();
+  
+  request.onsuccess = () => {
+    const chunks = request.result;
+    const list = document.getElementById('chunks-list');
+    if (!list) return;
+    
+    if (chunks.length === 0) {
+      list.innerHTML = '<p>No chunks loaded yet.</p>';
+      return;
+    }
+    
+    list.innerHTML = '';
+    chunks.slice(-5).reverse().forEach(chunk => {
+      const div = document.createElement('div');
+      div.className = 'chunk';
+      div.innerHTML = `
+        <div class="chunk-header">${chunk.source} • ${chunk.glyph}</div>
+        <strong>Address:</strong> ${chunk.address}<br>
+        ${chunk.topics ? '<strong>Topics:</strong> ' + chunk.topics.slice(0, 3).join(', ') + '<br>' : ''}
+        ${chunk.content.substring(0, 150)}...
+      `;
+      list.appendChild(div);
+    });
+  };
+}
+
+// ============================================================================
+// HASH & GLYPH GENERATION
+// ============================================================================
 function simpleHash(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -438,103 +1243,268 @@ function simpleHash(str) {
   return Math.abs(hash);
 }
 
-// Show preview of processed chunks
-async function showPreview() {
-  const tx = db.transaction(STORE_NAME, "readonly");
-  const store = tx.objectStore(STORE_NAME);
-  const request = store.getAll();
-  
-  request.onsuccess = () => {
-    const chunks = request.result;
-    const list = document.getElementById('chunks-list');
-    list.innerHTML = '';
-    
-    chunks.slice(-5).forEach(chunk => {
-      const div = document.createElement('div');
-      div.className = 'chunk';
-      div.innerHTML = `
-        <div class="chunk-header">${chunk.source} • Glyph: ${chunk.glyph}</div>
-        Address: ${chunk.address}<br>
-        ${chunk.content.substring(0, 200)}...
-      `;
-      list.appendChild(div);
-    });
-  };
+function hashToGlyph(str) {
+  const emojis = ['🌌','🔮','🪐','✨','💫','🌟','⭐','🌠','🎇','🎆','🔥','💥','⚡','💧','🌊','🌈','☀️','🌙','⚛️','🧬'];
+  const hash = simpleHash(str);
+  const i1 = hash % emojis.length;
+  const i2 = (hash >> 8) % emojis.length;
+  const i3 = (hash >> 16) % emojis.length;
+  return emojis[i1] + emojis[i2] + emojis[i3];
 }
 
-// Chat with Resona
-async function sendChat() {
-  const input = document.getElementById("chat-input");
-  const msg = input.value.trim();
-  if (!msg) return;
-  
-  const messages = document.getElementById("messages");
-  messages.innerHTML += `<div>You: ${msg}</div>`;
-  
-  // Search library
-  const matches = await searchLibrary(msg);
-  
-  if (matches.length > 0) {
-    let response = "From your library:\n";
-    matches.forEach(m => {
-      response += `<strong>${m.source}</strong> • ${m.glyph}<br>Address: \( {m.address}<br> \){m.content.substring(0, 300)}...<br><br>`;
-    });
-    messages.innerHTML += `<div>Resona: ${response}</div>`;
-  } else {
-    messages.innerHTML += `<div>Resona: No match in library yet — field exploring...</div>`;
-  }
-  
-  messages.scrollTop = messages.scrollHeight;
-  input.value = "";
-}
-
-// Search library (address boost)
-async function searchLibrary(query) {
-  return new Promise(resolve => {
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const store = tx.objectStore(STORE_NAME);
-    const request = store.getAll();
-    request.onsuccess = () => {
-      const matches = request.result.filter(item => 
-        item.content.toLowerCase().includes(query.toLowerCase()) ||
-        item.address.toLowerCase().includes(query.toLowerCase())
-      );
-      resolve(matches);
-    };
-  });
-}
-
-// Apply code
+// ============================================================================
+// SECURE CODE APPLICATION
+// ============================================================================
 function applyCode() {
   const input = document.getElementById('apply-input');
+  if (!input) return;
+  
   const text = input.value.trim();
   if (!text) return;
 
-  if (text.startsWith('apply js:')) {
-    const code = text.substring(9).trim();
-    try {
-      eval(code);
-      localStorage.setItem('customJS', code);
-      addMessage('system', 'JS applied and saved. Refresh to confirm.');
-    } catch (e) {
-      addMessage('error', 'JS error: ' + e.message);
-    }
-  } else if (text.startsWith('apply css:')) {
+  if (text.startsWith('apply css:')) {
     const css = text.substring(10).trim();
     document.getElementById('dynamic-style').innerHTML += '\n' + css;
     localStorage.setItem('customCSS', css);
-    addMessage('system', 'CSS applied and saved. Refresh to see it stick.');
+    addMessage('system', '✅ CSS applied and saved.');
+    log('system', 'Custom CSS applied');
+    
+  } else if (text.startsWith('apply js:')) {
+    const code = text.substring(9).trim();
+    
+    // Security check
+    const dangerousPatterns = [
+      /document\.cookie/i,
+      /localStorage\.clear/i,
+      /indexedDB\.deleteDatabase/i,
+      /fetch\(/i,
+      /XMLHttpRequest/i,
+      /__proto__/i,
+      /constructor/i
+    ];
+    
+    if (dangerousPatterns.some(pattern => pattern.test(code))) {
+      addMessage('error', '⛔ BLOCKED: Dangerous patterns detected');
+      return;
+    }
+    
+    try {
+      const sandboxedFunc = new Function('addMessage', 'log', code);
+      sandboxedFunc(addMessage, log);
+      localStorage.setItem('customJS', code);
+      addMessage('system', '✅ JS applied (with security checks).');
+      log('system', 'Custom JavaScript applied');
+    } catch (e) {
+      addMessage('error', 'JS error: ' + e.message);
+    }
+    
+  } else {
+    addMessage('error', 'Must prefix with "apply js:" or "apply css:"');
   }
 
   input.value = '';
 }
 
-// Message helper
-function addMessage(sender, text) {
+function loadCustomCode() {
+  const customCSS = localStorage.getItem('customCSS');
+  if (customCSS) {
+    document.getElementById('dynamic-style').innerHTML = customCSS;
+  }
+  
+  const customJS = localStorage.getItem('customJS');
+  if (customJS) {
+    try {
+      const sandboxedFunc = new Function('addMessage', 'log', customJS);
+      sandboxedFunc(addMessage, log);
+      log('system', 'Custom code loaded from storage');
+    } catch (e) {
+      log('error', 'Failed to load custom JS: ' + e.message);
+    }
+  }
+}
+
+// ============================================================================
+// MESSAGING
+// ============================================================================
+function addMessage(type, text) {
   const messages = document.getElementById("messages");
-  messages.innerHTML += `<div class="\( {sender}"> \){text}</div>`;
+  if (!messages) return;
+  
+  const div = document.createElement('div');
+  div.className = `msg-${type}`;
+  div.innerHTML = `<strong>${type === 'user' ? 'You' : type === 'resona' ? 'Resona' : type}:</strong> ${text}`;
+  messages.appendChild(div);
   messages.scrollTop = messages.scrollHeight;
 }
+
+function log(type, message) {
+  const logEl = document.getElementById('sentinel-log');
+  if (!logEl) return;
+  
+  const timestamp = new Date().toLocaleTimeString();
+  const icon = {
+    'system': '⚙️',
+    'sentinel': '🛡️',
+    'error': '❌',
+    'disruption': '⚠️'
+  }[type] || '📝';
+  
+  logEl.innerHTML += `<div>[${timestamp}] ${icon} ${message}</div>`;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ============================================================================
+// STATS UPDATE
+// ============================================================================
+async function updateStats() {
+  // Count library chunks
+  const txLib = db.transaction(STORE_LIBRARY, "readonly");
+  const storeLib = txLib.objectStore(STORE_LIBRARY);
+  const countLib = await new Promise(resolve => {
+    const request = storeLib.count();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => resolve(0);
+  });
+  
+  // Count organized files
+  const txOrg = db.transaction(STORE_ORGANIZED, "readonly");
+  const storeOrg = txOrg.objectStore(STORE_ORGANIZED);
+  const countOrg = await new Promise(resolve => {
+    const request = storeOrg.count();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => resolve(0);
+  });
+  
+  consciousnessStats.chunks = countLib;
+  consciousnessStats.organized = countOrg;
+  consciousnessStats.connections = countLib + countOrg;
+  
+  // Update displays
+  const statChunks = document.getElementById('stat-chunks');
+  const statOrganized = document.getElementById('stat-organized');
+  const statConnections = document.getElementById('stat-connections');
+  
+  if (statChunks) statChunks.textContent = countLib;
+  if (statOrganized) statOrganized.textContent = countOrg;
+  if (statConnections) statConnections.textContent = countLib + countOrg;
+}
+
+// ============================================================================
+// EXPORT/IMPORT/CLEAR
+// ============================================================================
+async function exportLibrary() {
+  const txLib = db.transaction(STORE_LIBRARY, "readonly");
+  const storeLib = txLib.objectStore(STORE_LIBRARY);
+  const library = await new Promise(resolve => {
+    const request = storeLib.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => resolve([]);
+  });
+  
+  const txOrg = db.transaction(STORE_ORGANIZED, "readonly");
+  const storeOrg = txOrg.objectStore(STORE_ORGANIZED);
+  const organized = await new Promise(resolve => {
+    const request = storeOrg.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => resolve([]);
+  });
+  
+  const exportData = {
+    timestamp: new Date().toISOString(),
+    library: library,
+    organized: organized,
+    stats: consciousnessStats
+  };
+  
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `resona_export_${Date.now()}.json`;
+  a.click();
+  
+  log('system', 'Library exported successfully');
+  addMessage('system', '📦 Library exported!');
+}
+
+async function importLibrary() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      
+      log('system', 'Importing library data...');
+      
+      // Import library chunks
+      if (data.library && data.library.length > 0) {
+        const txLib = db.transaction(STORE_LIBRARY, "readwrite");
+        const storeLib = txLib.objectStore(STORE_LIBRARY);
+        
+        for (const item of data.library) {
+          delete item.id;
+          await new Promise((resolve, reject) => {
+            const request = storeLib.add(item);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+          });
+        }
+      }
+      
+      // Import organized files
+      if (data.organized && data.organized.length > 0) {
+        const txOrg = db.transaction(STORE_ORGANIZED, "readwrite");
+        const storeOrg = txOrg.objectStore(STORE_ORGANIZED);
+        
+        for (const item of data.organized) {
+          delete item.id;
+          await new Promise((resolve, reject) => {
+            const request = storeOrg.add(item);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+          });
+        }
+      }
+      
+      updateStats();
+      showLibraryPreview();
+      log('system', `✅ Imported ${data.library?.length || 0} library chunks and ${data.organized?.length || 0} organized files`);
+      addMessage('system', '✅ Library imported successfully!');
+      
+    } catch (err) {
+      log('error', 'Import failed: ' + err.message);
+      addMessage('error', '❌ Import failed: ' + err.message);
+    }
+  };
+  
+  input.click();
+}
+
+async function clearLibrary() {
+  if (!confirm('Clear entire library? This cannot be undone.')) return;
+  
+  const txLib = db.transaction(STORE_LIBRARY, "readwrite");
+  const storeLib = txLib.objectStore(STORE_LIBRARY);
+  await storeLib.clear();
+  
+  const txOrg = db.transaction(STORE_ORGANIZED, "readwrite");
+  const storeOrg = txOrg.objectStore(STORE_ORGANIZED);
+  await storeOrg.clear();
+  
+  updateStats();
+  showLibraryPreview();
+  log('system', 'Library cleared');
+  addMessage('system', '🗑️ Library cleared');
+}
+
+// Update stats periodically
+setInterval(updateStats, 10000);
 </script>
 </body>
 </html>
