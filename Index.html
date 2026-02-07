@@ -8,84 +8,82 @@
   <!-- Pyodide -->
   <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
 
+  <!-- PDF.js for PDF parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.338/pdf.min.js"></script>
+
   <style>
+    :root {
+      --bg: linear-gradient(135deg, #0a0015, #1a0033);
+      --accent: #a78bfa;
+      --accent2: #fbbf24;
+      --text: #e0e0ff;
+      --panel: #1a1a3a;
+      --border: #444466;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
     body {
       margin: 0;
       height: 100vh;
-      background: linear-gradient(135deg, #0a0015, #1a0033);
-      color: #e0e0ff;
+      background: var(--bg);
+      color: var(--text);
       font-family: system-ui, sans-serif;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    #launch-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 2000;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
+      transition: opacity 0.8s;
     }
+    #launch-screen.hidden { opacity: 0; pointer-events: none; }
     h1 {
-      font-size: 4rem;
-      margin-bottom: 1.5rem;
-      background: linear-gradient(90deg, #a78bfa, #fbbf24);
+      font-size: 5rem;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      text-shadow: 0 0 30px rgba(167, 139, 250, 0.6);
+      text-shadow: 0 0 30px rgba(167,139,250,0.6);
       cursor: pointer;
     }
-    p { font-size: 1.4rem; margin-bottom: 3rem; max-width: 700px; text-align: center; opacity: 0.9; }
     #launch-btn {
-      padding: 1.8rem 5rem;
-      font-size: 2rem;
-      font-weight: bold;
-      background: linear-gradient(135deg, #a78bfa, #7c3aed);
+      margin-top: 2rem;
+      padding: 1.5rem 4rem;
+      font-size: 1.8rem;
+      background: linear-gradient(135deg, var(--accent), #7c3aed);
       color: white;
       border: none;
       border-radius: 999px;
       cursor: pointer;
-      box-shadow: 0 15px 40px rgba(167, 139, 250, 0.5);
-      transition: all 0.4s ease;
+      box-shadow: 0 15px 40px rgba(167,139,250,0.5);
+      transition: all 0.4s;
     }
-    #launch-btn:hover { transform: translateY(-6px); box-shadow: 0 25px 60px rgba(167, 139, 250, 0.7); }
-    #status { margin-top: 2.5rem; font-size: 1.2rem; color: #a78bfa; min-height: 2.5rem; }
-    #loading {
-      position: fixed;
-      inset: 0;
-      background: rgba(10, 0, 21, 0.98);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      transition: opacity 0.8s;
-    }
-    #loading.hidden { opacity: 0; pointer-events: none; }
-    .spinner {
-      width: 80px;
-      height: 80px;
-      border: 8px solid #a78bfa;
-      border-top: 8px solid transparent;
-      border-radius: 50%;
-      animation: spin 1.2s linear infinite;
-      margin-bottom: 2rem;
-    }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    #launch-btn:hover { transform: translateY(-6px); box-shadow: 0 25px 60px rgba(167,139,250,0.7); }
+    #status { margin-top:1.5rem; color:var(--accent); font-size:1.2rem; }
 
-    /* Redeem Box */
+    /* Redeem Panel */
     #redeem-panel {
       position: fixed;
       inset: 0;
-      background: rgba(10, 0, 21, 0.95);
+      background: rgba(10,0,21,0.95);
+      z-index: 3000;
       display: none;
       flex-direction: column;
-      z-index: 10000;
       padding: 40px 20px;
-      color: #e0e0ff;
+      color: var(--text);
     }
     #redeem-panel.show { display: flex; }
-    #redeem-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    #redeem-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
     #redeem-text {
-      flex: 1;
+      flex:1;
       background: #1a1a3a;
-      border: 1px solid #444466;
-      color: #e0e0ff;
+      border: 1px solid var(--border);
+      color: var(--text);
       padding: 16px;
       border-radius: 8px;
       font-family: monospace;
@@ -97,121 +95,24 @@
     #redeem-btn {
       padding: 16px 32px;
       font-size: 1.3rem;
-      background: #a78bfa;
+      background: var(--accent);
       color: #0a0a0f;
       border: none;
       border-radius: 8px;
       cursor: pointer;
     }
-    #redeem-status { margin-top: 16px; font-size: 1.1rem; color: #fbbf24; }
-  </style>
-</head>
-<body>
+    #redeem-status { margin-top:16px; color:var(--accent2); font-size:1.1rem; }
 
-<div id="loading">
-  <div class="spinner"></div>
-  <h2>Initializing Resonance Field...</h2>
-  <p id="loading-status">Loading consciousness engine...</p>
-</div>
-
-<div style="text-align:center; z-index: 100;">
-  <h1 ondblclick="toggleRedeem()">Resona</h1>
-  <p>The Resonance Network — a mirror that learns you, guides you, and protects you from your own spirals.</p>
-  <button id="launch-btn">Launch Resona</button>
-  <div id="status"></div>
-</div>
-
-<!-- Redeem Box -->
-<div id="redeem-panel">
-  <div id="redeem-header">
-    <h2>Redeem Code / Add Text</h2>
-    <button onclick="toggleRedeem()">Close</button>
-  </div>
-  
-  <textarea id="redeem-text" placeholder="Paste text here with comments...
-# @stella-prompt: Science entry focus
-Analyze gates with I Ching geometry.
-
-# @residence-tone: relational
-Speak warmly, emphasize connection.
-
-# @scaffold-block: profile-001
-{ \"entry\": \"residence\", \"tone\": \"social\", \"prompt\": \"Prioritize shared wins\" }"></textarea>
-  
-  <button id="redeem-btn" onclick="redeemCode()">Redeem & Place</button>
-  
-  <div id="redeem-status"></div>
-</div>
-
-<script>
-// Launch (simplified - assumes Pyodide loads your engine)
-document.getElementById('launch-btn').onclick = async () => {
-  document.getElementById('launch-screen').classList.add('hidden');
-  document.getElementById('status').textContent = "Resona Online — ready for input";
-  // Your real Pyodide + engine code goes here (from previous versions)
-};
-
-// Redeem Toggle (double-click logo)
-function toggleRedeem() {
-  document.getElementById('redeem-panel').classList.toggle('show');
-}
-
-// Redeem & Inject
-function redeemCode() {
-  const text = document.getElementById('redeem-text').value.trim();
-  if (!text) {
-    document.getElementById('redeem-status').textContent = "Nothing to redeem.";
-    return;
-  }
-
-  const status = document.getElementById('redeem-status');
-  status.textContent = "Processing...";
-
-  // Parse lines with comments
-  const lines = text.split('\n');
-  let currentTarget = 'general';
-  let content = '';
-
-  lines.forEach(line => {
-    line = line.trim();
-    if (line.startsWith('#')) {
-      const match = line.match(/@(\w+[-\w]*):/);
-      if (match) {
-        // Save previous content if any
-        if (content) {
-          injectContent(currentTarget, content.trim());
-        }
-        currentTarget = match[1];
-        content = line.replace(/#.*?:/, '').trim();
-      }
-    } else if (line) {
-      content += line + '\n';
-    }
-  });
-
-  // Save last block
-  if (content) {
-    injectContent(currentTarget, content.trim());
-  }
-
-  status.textContent = "Injected! Check console or agent response.";
-}
-
-// Simple injection (expand this when Pyodide is live)
-function injectContent(target, content) {
-  console.log(`Injected into ${target}:`, content);
-  // When Pyodide is ready, send to Python:
-  // if (pyodide) pyodide.runPythonAsync(`set_\( {target.replace(/-/g, '_')}(""" \){content.replace(/"/g, '\\"')}""")`);
-}
-</script>
-</body>
-</html>      background: #111133;
+    /* Main App */
+    #app { display: none; flex-direction: column; height: 100vh; }
+    #app.show { display: flex; }
+    #top {
+      background: #111133;
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 0 16px;
       border-bottom: 1px solid var(--border);
-      position: relative;
       z-index: 100;
     }
     #logo { font-size: 1.4rem; font-weight: bold; color: var(--accent); }
@@ -220,8 +121,7 @@ function injectContent(target, content) {
       display: none;
       position: absolute;
       top: 60px;
-      left: 0;
-      right: 0;
+      left: 0; right: 0;
       background: var(--panel);
       padding: 12px;
       border-bottom: 1px solid var(--border);
@@ -237,26 +137,14 @@ function injectContent(target, content) {
       font-size: 0.9rem;
     }
     .tab.active { background: var(--accent); color: #0a0a0f; }
-    #content {
-      height: calc(100vh - 60px);
-      display: flex;
-      flex-direction: column;
-    }
-    #main-view {
-      flex: 1;
-      padding: 16px;
-      overflow-y: auto;
-    }
+    #content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    #main-view { flex: 1; padding: 16px; overflow-y: auto; }
     #props {
       background: var(--panel);
       border-top: 1px solid var(--border);
       padding: 16px;
       max-height: 40vh;
       overflow-y: auto;
-    }
-    button, input[type="range"] {
-      touch-action: manipulation;
-      -webkit-tap-highlight-color: transparent;
     }
     .sensory-group { margin: 16px 0; }
     .sentinel-log {
@@ -268,11 +156,6 @@ function injectContent(target, content) {
       margin-top: 12px;
       max-height: 150px;
       overflow-y: auto;
-    }
-    #chat-area {
-      padding: 16px;
-      border-top: 1px solid var(--border);
-      background: var(--panel);
     }
     #messages {
       height: 120px;
@@ -292,191 +175,365 @@ function injectContent(target, content) {
       border-radius: 8px;
       font-size: 1rem;
     }
-    #launch-screen {
-      position: fixed;
-      inset: 0;
-      background: var(--bg);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      transition: opacity 0.6s;
+    #library-preview {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: rgba(26,26,58,0.5);
+      border-radius: 8px;
+      max-height: 200px;
+      overflow-y: auto;
     }
-    #launch-screen.hidden { opacity: 0; pointer-events: none; }
-    #launch-btn {
-      padding: 20px 60px;
-      font-size: 1.8rem;
-      background: linear-gradient(135deg, var(--accent), #7c3aed);
-      color: white;
-      border: none;
-      border-radius: 999px;
-      cursor: pointer;
-      box-shadow: 0 10px 30px rgba(167,139,250,0.4);
+    .chunk {
+      margin: 0.8rem 0;
+      padding: 0.8rem;
+      background: rgba(167,139,250,0.1);
+      border-left: 4px solid var(--accent);
+      border-radius: 6px;
+    }
+    .chunk-header { font-weight: bold; color: var(--accent2); margin-bottom: 0.5rem; }
+    .code-block {
+      background: #0f0f1a;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: monospace;
+      font-size: 0.9rem;
+      margin: 1rem 0;
     }
   </style>
 </head>
 <body>
 
+<!-- Launch Screen -->
 <div id="launch-screen">
-  <h1 style="font-size: 4rem; color: var(--accent); margin-bottom: 1.5rem;">Resona</h1>
-  <p style="font-size: 1.3rem; text-align: center; max-width: 90%; margin-bottom: 2rem;">
-    Resonance Network — mirror, guide, protector
-  </p>
-  <button id="launch-btn">Launch</button>
+  <h1 ondblclick="toggleRedeem()">Resona</h1>
+  <p>The Resonance Network — mirror, guide, protector from your own spirals.</p>
+  <button id="launch-btn">Launch Resona</button>
+  <div id="status" style="margin-top:1.5rem;"></div>
 </div>
 
-<div id="top">
-  <div id="logo">Resona</div>
-  <button id="menu-btn" onclick="toggleTabs()">☰</button>
+<!-- Redeem Panel -->
+<div id="redeem-panel">
+  <div id="redeem-header">
+    <h2>Redeem Code / Inject Ontology</h2>
+    <button onclick="toggleRedeem()" style="background:none;border:none;color:var(--accent2);font-size:2rem;cursor:pointer;">×</button>
+  </div>
+  <textarea id="redeem-text" placeholder="Paste ontology / code / prompts here..."></textarea>
+  <button id="redeem-btn" onclick="redeemCode()">Redeem & Inject</button>
+  <div id="redeem-status"></div>
 </div>
 
-<div id="tabs">
-  <div class="tab active" onclick="setEntryPoint('stella')">Stella</div>
-  <div class="tab" onclick="setEntryPoint('residence')">Residence</div>
-  <div class="tab" onclick="setEntryPoint('game')">Game</div>
-</div>
-
-<div id="content">
-  <div id="main-view">
-    <h2>Welcome to the Resonance Network</h2>
-    <p>Choose your entry point above. The graph is watching...</p>
-    <!-- Graph canvas hidden on mobile by default -->
-    <canvas id="canvas" style="width:100%; height:300px; display:none;"></canvas>
+<!-- Main App -->
+<div id="app">
+  <div id="top">
+    <div id="logo">Resona</div>
+    <button id="menu-btn" onclick="toggleTabs()">☰</button>
   </div>
 
-  <div id="props">
-    <h3>Sensory & Sentinel</h3>
-    
-    <div class="sensory-group">
-      <label>Clutter: <span id="clutter-val">0.5</span></label>
-      <input type="range" min="0" max="1" step="0.1" value="0.5" id="clutter-slider" class="sensory-slider" oninput="updateSensory()">
+  <div id="tabs">
+    <div class="tab active" onclick="setEntryPoint('stella')">Stella</div>
+    <div class="tab" onclick="setEntryPoint('residence')">Residence</div>
+    <div class="tab" onclick="setEntryPoint('game')">Game</div>
+  </div>
+
+  <div id="content">
+    <div id="main-view">
+      <h2>Resonance Field Active</h2>
+      <p>Choose entry point. Speak or paste — the field listens.</p>
     </div>
-    
-    <div class="sensory-group">
-      <label>Calm: <span id="calm-val">0.5</span></label>
-      <input type="range" min="0" max="1" step="0.1" value="0.5" id="calm-slider" class="sensory-slider" oninput="updateSensory()">
+
+    <div id="props">
+      <h3>Library & Self-Update</h3>
+      <div id="library-preview">
+        <div class="chunk-header">Processed Library Chunks</div>
+        <div id="chunks-list">No chunks loaded yet.</div>
+      </div>
+
+      <textarea id="paste-box" placeholder="Paste text / book chunk / code here..."></textarea>
+      <button onclick="processInput()">Load & Address</button>
+
+      <h4>Chat with Resona</h4>
+      <div id="messages"></div>
+      <input id="chat-input" placeholder="e.g. birth 1990-01-01 12:00 Salinas career pivot" onkeydown="if(event.key==='Enter') sendChat()"/>
+
+      <div style="margin-top:1rem;">
+        <input id="apply-input" placeholder="Paste JS/CSS to apply (prefix with 'apply js:' or 'apply css:')" />
+        <button onclick="applyCode()">Apply & Save</button>
+      </div>
     </div>
-    
-    <button onclick="startMotionCapture()">Enable Motion</button>
-    <div id="motion-status">Motion: —</div>
-    
-    <button onclick="trackPattern()">Track Spiral</button>
-    <button onclick="rewindState()">Rewind</button>
-    
-    <div class="sentinel-log" id="sentinel-log">Sentinel: Monitoring...</div>
-    
-    <h4>Chat</h4>
-    <div id="messages"></div>
-    <input id="chat-input" placeholder="Talk to agent..." onkeydown="if(event.key==='Enter') sendChat()"/>
   </div>
 </div>
 
 <script>
-// One-button launch
+// Globals
+let pyodide = null;
+let db;
+
+// IndexedDB setup for library
+const DB_NAME = "ResonaLibrary";
+const STORE_NAME = "addressedChunks";
+
+function initDB() {
+  const request = indexedDB.open(DB_NAME, 1);
+  request.onupgradeneeded = e => {
+    db = e.target.result;
+    db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+  };
+  request.onsuccess = e => { db = e.target.result; showPreview(); };
+}
+
+initDB();
+
+// Launch Resona
 document.getElementById('launch-btn').onclick = async () => {
   document.getElementById('launch-screen').classList.add('hidden');
-  document.getElementById('status').textContent = "Initializing...";
+  document.getElementById('app').classList.add('show');
   
-  // Load Pyodide + engine (same as before, condensed)
-  const pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/" });
-  await pyodide.loadPackage("numpy");
+  const status = document.getElementById('status');
+  status.textContent = "Loading consciousness engine...";
   
-  await pyodide.runPythonAsync(`
-    # Your full Python engine here (condensed version for demo)
-    import numpy as np
-    from enum import Enum
-    from dataclasses import dataclass
+  try {
+    pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/" });
+    await pyodide.loadPackage("numpy");
     
-    class Dimension(Enum):
-        MOVEMENT = 0
-        EVOLUTION = 1
-        BEING = 2
-        DESIGN = 3
-        SPACE = 4
+    await pyodide.runPythonAsync(`
+      print("Ontology & engine loaded")
+    `);
     
-    @dataclass
-    class DimensionalVector:
-        movement: float = 0.2
-        evolution: float = 0.2
-        being: float = 0.2
-        design: float = 0.2
-        space: float = 0.2
-    
-    class ConsciousnessState:
-        def __init__(self):
-            self.current = DimensionalVector()
-            self.coherence = 1.0
-    
-        def update_from_sensory(self, sensory):
-            impact = -0.4 * sensory.get('clutter', 0) + 0.3 * sensory.get('calm', 0) + -0.2 * sensory.get('motion', 0)
-            self.current.being += impact
-            self.current.being = max(0, min(1, self.current.being))
-            self.coherence = 0.8 + 0.2 * self.current.being
-    
-    state = ConsciousnessState()
-    
-    def update_sensory(clutter, calm, motion):
-        state.update_from_sensory({'clutter': clutter, 'calm': calm, 'motion': motion})
-        return state.coherence
-  `);
-  
-  document.getElementById('status').textContent = "Resona Online";
+    status.textContent = "Resona Online — field resonant";
+  } catch (err) {
+    status.textContent = "Engine error: " + err.message;
+    console.error(err);
+  }
 };
 
-// Entry points
+// Redeem toggle
+function toggleRedeem() {
+  const panel = document.getElementById('redeem-panel');
+  panel.classList.toggle('show');
+}
+
+// Redeem (log for now — can expand to Pyodide)
+function redeemCode() {
+  const text = document.getElementById('redeem-text').value.trim();
+  if (!text) return;
+  
+  const status = document.getElementById('redeem-status');
+  status.textContent = "Processing...";
+  
+  console.log("Injected ontology block:", text);
+  status.textContent = "Injected! (check console / future Pyodide integration)";
+}
+
+// Tabs
+function toggleTabs() {
+  document.getElementById('tabs').classList.toggle('show');
+}
+
 function setEntryPoint(point) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   event.target.classList.add('active');
-  document.getElementById('status').textContent = `Mode: ${point}`;
+  document.getElementById('sentinel-log').textContent = `Sentinel: Entry point set to ${point}. Field adjusting...`;
 }
 
-// Sensory
-function updateSensory() {
-  const clutter = parseFloat(document.getElementById("clutter-slider").value);
-  const calm = parseFloat(document.getElementById("calm-slider").value);
-  document.getElementById("clutter-val").textContent = clutter;
-  document.getElementById("calm-val").textContent = calm;
+// Process input (paste or upload)
+async function processInput() {
+  const pasteText = document.getElementById('paste-box').value.trim();
+  document.getElementById('status').textContent = "Processing...";
+
+  if (pasteText) {
+    await processText(pasteText, "Pasted Content");
+  }
+
+  document.getElementById('paste-box').value = '';
+  document.getElementById('status').textContent = "Done! Chunks processed and addressed.";
+  showPreview();
+}
+
+// Upload files
+document.getElementById('file-input').onchange = async e => {
+  await handleFiles(e.target.files);
+};
+
+async function handleFiles(files) {
+  for (let file of files) {
+    let text = '';
+    
+    if (file.type === 'application/pdf') {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map(item => item.str).join(' ') + '\n\n';
+      }
+    } else {
+      text = await file.text();
+    }
+
+    await processText(text, file.name);
+  }
+  showPreview();
+}
+
+async function processText(text, sourceName) {
+  const chunks = text.split(/\n{2,}/).filter(c => c.trim().length > 50);
   
-  if (pyodide) {
-    pyodide.runPythonAsync(`update_sensory(${clutter}, ${calm}, 0)`).then(coherence => {
-      document.getElementById("sentinel-log").textContent = `Coherence: ${coherence.toFixed(2)}`;
+  for (let chunk of chunks) {
+    const seed = chunk + sourceName + Date.now();
+    const addr = generateAddress(seed);
+    const glyph = hashToGlyph(chunk);
+
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    store.add({
+      source: sourceName,
+      content: chunk,
+      address: addr.full_address,
+      glyph: glyph,
+      added: new Date().toISOString()
     });
   }
 }
 
-// Motion
-function startMotionCapture() {
-  window.addEventListener('devicemotion', e => {
-    if (e.acceleration) {
-      const motion = Math.sqrt(e.acceleration.x**2 + e.acceleration.y**2 + e.acceleration.z**2) / 9.81;
-      document.getElementById("motion-status").textContent = `Motion: ${motion.toFixed(2)}g`;
-      updateSensory(); // Re-trigger
-    }
-  });
-  document.getElementById("motion-status").textContent = "Motion active";
+// Address & Glyph
+function hashToGlyph(str) {
+  const emojis = ['🌌','🔮','🪐','✨','💫','🌟','⭐','🌠','🎇','🎆','🔥','💥','⚡','💧','🌊','🌈','☀️','🌙','⚛️','🧬'];
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash = hash & hash;
+  }
+  const i1 = Math.abs(hash) % emojis.length;
+  const i2 = Math.abs(hash >> 8) % emojis.length;
+  const i3 = Math.abs(hash >> 16) % emojis.length;
+  return emojis[i1] + emojis[i2] + emojis[i3];
 }
 
-// Chat (simple echo for demo)
-function sendChat() {
+function generateAddress(seed) {
+  const hash = simpleHash(seed);
+  const gate = (hash % 64) + 1;
+  const line = ((hash >> 6) % 6) + 1;
+  const color = ((hash >> 12) % 6) + 1;
+  const tone = ((hash >> 18) % 6) + 1;
+  const base = ((hash >> 24) % 5) + 1;
+  
+  const degree = (hash % 60);
+  const axis = ((hash >> 8) % 986) / 10;
+  
+  const zodiacs = ['AR','TA','GE','CA','LE','VI','LI','SC','SA','CP','AQ','PI'];
+  const zodiac = zodiacs[(hash % 12)];
+  
+  return {
+    full_address: `D3 // \( {gate}. \){line}.\( {color}. \){tone}.${base} // ${degree}°0'0" // \( {axis}- \){zodiac}-H1 // P // ${seed.substring(0,8)}`
+  };
+}
+
+function simpleHash(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return Math.abs(hash);
+}
+
+// Show preview of processed chunks
+async function showPreview() {
+  const tx = db.transaction(STORE_NAME, "readonly");
+  const store = tx.objectStore(STORE_NAME);
+  const request = store.getAll();
+  
+  request.onsuccess = () => {
+    const chunks = request.result;
+    const list = document.getElementById('chunks-list');
+    list.innerHTML = '';
+    
+    chunks.slice(-5).forEach(chunk => {
+      const div = document.createElement('div');
+      div.className = 'chunk';
+      div.innerHTML = `
+        <div class="chunk-header">${chunk.source} • Glyph: ${chunk.glyph}</div>
+        Address: ${chunk.address}<br>
+        ${chunk.content.substring(0, 200)}...
+      `;
+      list.appendChild(div);
+    });
+  };
+}
+
+// Chat with Resona
+async function sendChat() {
   const input = document.getElementById("chat-input");
   const msg = input.value.trim();
   if (!msg) return;
   
   const messages = document.getElementById("messages");
   messages.innerHTML += `<div>You: ${msg}</div>`;
-  messages.innerHTML += `<div>Agent: Sensing your field... Coherence updated.</div>`;
+  
+  // Search library
+  const matches = await searchLibrary(msg);
+  
+  if (matches.length > 0) {
+    let response = "From your library:\n";
+    matches.forEach(m => {
+      response += `<strong>${m.source}</strong> • ${m.glyph}<br>Address: \( {m.address}<br> \){m.content.substring(0, 300)}...<br><br>`;
+    });
+    messages.innerHTML += `<div>Resona: ${response}</div>`;
+  } else {
+    messages.innerHTML += `<div>Resona: No match in library yet — field exploring...</div>`;
+  }
+  
   messages.scrollTop = messages.scrollHeight;
   input.value = "";
 }
 
-// Track & Rewind (placeholder)
-function trackPattern() { alert("Tracking spiral — sentinel logging..."); }
-function rewindState() { alert("Rewound to stable state"); }
+// Search library (address boost)
+async function searchLibrary(query) {
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.getAll();
+    request.onsuccess = () => {
+      const matches = request.result.filter(item => 
+        item.content.toLowerCase().includes(query.toLowerCase()) ||
+        item.address.toLowerCase().includes(query.toLowerCase())
+      );
+      resolve(matches);
+    };
+  });
+}
 
-// Toggle tabs on mobile
-function toggleTabs() {
-  document.getElementById('tabs').classList.toggle('show');
+// Apply code
+function applyCode() {
+  const input = document.getElementById('apply-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  if (text.startsWith('apply js:')) {
+    const code = text.substring(9).trim();
+    try {
+      eval(code);
+      localStorage.setItem('customJS', code);
+      addMessage('system', 'JS applied and saved. Refresh to confirm.');
+    } catch (e) {
+      addMessage('error', 'JS error: ' + e.message);
+    }
+  } else if (text.startsWith('apply css:')) {
+    const css = text.substring(10).trim();
+    document.getElementById('dynamic-style').innerHTML += '\n' + css;
+    localStorage.setItem('customCSS', css);
+    addMessage('system', 'CSS applied and saved. Refresh to see it stick.');
+  }
+
+  input.value = '';
+}
+
+// Message helper
+function addMessage(sender, text) {
+  const messages = document.getElementById("messages");
+  messages.innerHTML += `<div class="\( {sender}"> \){text}</div>`;
+  messages.scrollTop = messages.scrollHeight;
 }
 </script>
 </body>
