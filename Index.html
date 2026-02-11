@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#000000">
+    <title>You-n-i-verse | Living P2P Organism</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        :root {
+            --void: #000000; --organism: #050508; --cell: #0a0a12; --membrane: #151520;
+            --life: #00ff88; --life-dim: rgba(0, 255, 136, 0.15); --neural: #9d4edd; --neural-dim: rgba(157, 78, 221, 0.15);
+            --quest: #ff006e; --quest-dim: rgba(255, 0, 110, 0.15); --circle: #00d4ff; --circle-dim: rgba(0, 212, 255, 0.15);
+            --amber: #ffaa00; --alert: #ff3333; --p2p: #39ff14; --p2p-dim: rgba(57, 255, 20, 0.15);
+            --text: #e0e0e0; --dim: #666; --offline: #ffaa00; --mesh: #9d4edd; --sms: #00d4ff; --bt: #39ff14;
+            --stellar: #00d4ff; --universe: #39ff14; --resona: #9d4edd;
+            --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        @keyframes breathe { 0%, 100% { opacity: 0.9; } 50% { opacity: 1; } }
+        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 20px currentColor; } 50% { box-shadow: 0 0 40px currentColor; } }
+        @keyframes emerge { 0% { opacity: 0; transform: translateY(20px) scale(0.95); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes flow { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+        @keyframes data-flow { 0% { stroke-dashoffset: 100; } 100% { stroke-dashoffset: 0; } }
+        @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes rotate { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+        @keyframes scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+        html, body { height: 100%; overflow: hidden; touch-action: manipulation; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--void); color: var(--text);
+            display: flex; flex-direction: column;
+            font-size: 16px; line-height: 1.5;
+        }
+
+        /* TRINITY ENTRY */
+        .trinity-portal {
+            position: fixed; inset: 0; z-index: 10000;
+            background: radial-gradient(ellipse at center, var(--cell) 0%, var(--void) 100%);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.8s, transform 0.8s;
+        }
+        .trinity-portal.entered { opacity: 0; pointer-events: none; transform: scale(1.1); }
+        
+        .trinity-title { font-size: clamp(24px, 5vw, 48px); font-weight: bold; margin-bottom: 40px; text-align: center; letter-spacing: 4px; }
+        .trinity-title span { background: linear-gradient(90deg, var(--stellar), var(--universe), var(--resona)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .trinity-gates { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; padding: 20px; }
+        .gate {
+            width: clamp(140px, 30vw, 200px); aspect-ratio: 3/4;
+            border: 2px solid rgba(255,255,255,0.1); border-radius: 24px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.4s; position: relative; overflow: hidden;
+            background: rgba(255,255,255,0.02); padding: 24px; text-align: center;
+        }
+        .gate::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.05) 100%);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .gate:hover::before { opacity: 1; }
+        .gate.stellar { border-color: var(--stellar); color: var(--stellar); }
+        .gate.stellar:hover { box-shadow: 0 0 60px var(--circle-dim); transform: translateY(-10px); }
+        .gate.universe { border-color: var(--universe); color: var(--universe); }
+        .gate.universe:hover { box-shadow: 0 0 60px rgba(57,255,20,0.2); transform: translateY(-10px); }
+        .gate.resona { border-color: var(--resona); color: var(--resona); }
+        .gate.resona:hover { box-shadow: 0 0 60px var(--neural-dim); transform: translateY(-10px); }
+        
+        .gate-icon { font-size: clamp(32px, 8vw, 48px); margin-bottom: 16px; filter: drop-shadow(0 0 10px currentColor); }
+        .gate-name { font-size: clamp(12px, 3vw, 14px); font-weight: bold; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+        .gate-desc { font-size: clamp(10px, 2.5vw, 11px); opacity: 0.7; line-height: 1.4; }
+
+        /* MAIN ORGANISM */
+        .organism { display: none; flex-direction: column; height: 100vh; }
+        .organism.active { display: flex; animation: emerge 0.6s ease; }
+
+        /* Header */
+        .organism-header {
+            background: linear-gradient(180deg, var(--cell) 0%, transparent 100%);
+            padding: 12px 16px; border-bottom: 1px solid var(--life-dim);
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .organism-id { display: flex; align-items: center; gap: 12px; }
+        .life-pulse {
+            width: 10px; height: 10px; background: var(--life); border-radius: 50%;
+            animation: pulse-glow 2s infinite; box-shadow: 0 0 10px var(--life);
+        }
+        .organism-name { font-size: 18px; font-weight: bold; letter-spacing: 2px; }
+        .organism-name span { color: var(--life); }
+        
+        .connection-mode {
+            display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600;
+            padding: 8px 14px; border-radius: 20px; border: 1.5px solid currentColor;
+            min-height: 40px;
+        }
+        .connection-mode.online { color: var(--life); border-color: var(--life); background: var(--life-dim); }
+        .connection-mode.offline { color: var(--offline); border-color: var(--offline); animation: pulse-slow 2s infinite; }
+        .connection-mode.mesh { color: var(--mesh); border-color: var(--mesh); background: var(--neural-dim); }
+
+        .header-actions { display: flex; gap: 8px; }
+        .icon-btn {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: transparent; border: 1.5px solid var(--membrane);
+            color: var(--text); font-size: 20px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .icon-btn:active { transform: scale(0.9); }
+        .icon-btn.active { background: var(--life); color: #000; border-color: var(--life); }
+
+        /* Navigation */
+        .perspective-nav {
+            display: flex; gap: 4px; padding: 12px 16px; background: rgba(0,0,0,0.3);
+            overflow-x: auto; scrollbar-width: none;
+        }
+        .perspective-nav::-webkit-scrollbar { display: none; }
+        .perspective-btn {
+            padding: 12px 20px; background: transparent; border: 1px solid transparent;
+            color: var(--dim); border-radius: 12px; cursor: pointer; white-space: nowrap;
+            font-size: 12px; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s;
+        }
+        .perspective-btn.active { color: var(--text); border-color: currentColor; }
+        .perspective-btn.stellar.active { background: var(--circle-dim); color: var(--stellar); }
+        .perspective-btn.universe.active { background: rgba(57,255,20,0.1); color: var(--universe); }
+        .perspective-btn.resona.active { background: var(--neural-dim); color: var(--resona); }
+        .perspective-btn.hub.active { background: var(--life-dim); color: var(--life); }
+        .perspective-btn.p2p.active { background: var(--p2p-dim); color: var(--p2p); }
+
+        .organism-body { flex: 1; display: flex; overflow: hidden; position: relative; }
+
+        /* VIEWS */
+        .view { display: none; flex: 1; overflow-y: auto; padding: 20px; -webkit-overflow-scrolling: touch; }
+        .view.active { display: block; animation: emerge 0.4s ease; }
+
+        /* HUB VIEW */
+        .hub-grid { display: grid; gap: 16px; }
+        @media (min-width: 768px) { .hub-grid { grid-template-columns: repeat(2, 1fr); } }
+        
+        .hub-card {
+            background: var(--cell); border: 1px solid var(--membrane); border-radius: 20px;
+            padding: 24px; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden;
+        }
+        .hub-card::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px;
+            background: linear-gradient(90deg, var(--life), var(--circle)); opacity: 0; transition: opacity 0.3s;
+        }
+        .hub-card:hover::before { opacity: 1; }
+        .hub-card:hover { transform: translateY(-4px); border-color: var(--life); box-shadow: 0 20px 40px rgba(0,255,136,0.1); }
+        
+        .hub-icon { font-size: 32px; margin-bottom: 16px; }
+        .hub-title { font-size: 20px; font-weight: bold; margin-bottom: 8px; }
+        .hub-desc { font-size: 13px; opacity: 0.7; line-height: 1.5; }
+        .hub-meta { display: flex; gap: 16px; margin-top: 16px; font-size: 11px; opacity: 0.6; }
+
+        /* OPPORTUNITIES FEED */
+        .feed { padding: 16px; }
+        .opportunity-card {
+            background: var(--cell); border: 1.5px solid var(--membrane);
+            border-radius: 20px; padding: 20px; margin-bottom: 16px;
+            position: relative; transition: all 0.2s;
+        }
+        .opportunity-card:active { transform: scale(0.99); }
+        .opportunity-card.local { border-left: 4px solid var(--bt); }
+        .opportunity-card.mesh { border-left: 4px solid var(--mesh); }
+
+        .card-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            margin-bottom: 12px; gap: 12px;
+        }
+        .card-type {
+            font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+            padding: 6px 12px; border-radius: 20px; background: rgba(255,255,255,0.06);
+            font-weight: 600;
+        }
+        .card-source { font-size: 18px; opacity: 0.6; }
+        .card-title { font-size: 20px; font-weight: bold; margin-bottom: 10px; line-height: 1.3; }
+        .card-desc { font-size: 15px; opacity: 0.85; line-height: 1.5; margin-bottom: 16px; }
+        .card-footer {
+            display: flex; justify-content: space-between; align-items: center; gap: 12px;
+        }
+        .card-compensation { font-size: 17px; color: var(--life); font-weight: 700; }
+        .card-actions { display: flex; gap: 10px; }
+        .btn {
+            min-height: 44px; padding: 10px 20px; border-radius: 12px;
+            border: none; font-size: 15px; font-weight: 600; cursor: pointer;
+            transition: all 0.2s; touch-action: manipulation;
+        }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary { background: var(--life); color: #000; }
+        .btn-secondary { background: rgba(255,255,255,0.08); color: var(--text); }
+
+        /* CIRCLES & QUESTS */
+        .circles-list, .quest-board { display: flex; flex-direction: column; gap: 12px; }
+        .circle-item {
+            background: var(--cell); border: 1px solid var(--circle-dim); border-radius: 16px;
+            padding: 20px; display: flex; align-items: center; gap: 16px; cursor: pointer; transition: all 0.3s;
+        }
+        .circle-item:hover { border-color: var(--circle); background: var(--circle-dim); }
+        .circle-avatar { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--circle), var(--neural)); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .circle-info { flex: 1; }
+        .circle-name { font-weight: bold; margin-bottom: 4px; }
+        .circle-location { font-size: 12px; opacity: 0.6; display: flex; align-items: center; gap: 4px; }
+        .circle-economy { text-align: right; }
+        .circle-funds { font-size: 18px; font-weight: bold; color: var(--circle); }
+        .circle-members { font-size: 11px; opacity: 0.6; }
+
+        .quest-item {
+            background: var(--cell); border: 1px solid var(--quest-dim); border-radius: 16px;
+            padding: 20px; position: relative; overflow: hidden; transition: all 0.3s;
+        }
+        .quest-item:hover { border-color: var(--quest); }
+        .quest-difficulty { position: absolute; top: 20px; right: 20px; font-size: 11px; letter-spacing: 2px; color: var(--quest); font-weight: bold; }
+        .quest-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; padding-right: 80px; }
+        .quest-desc { font-size: 13px; opacity: 0.8; margin-bottom: 16px; line-height: 1.5; }
+        .quest-footer { display: flex; justify-content: space-between; align-items: center; }
+        .quest-reward { font-size: 12px; color: var(--amber); font-weight: 600; }
+        .quest-accept { padding: 10px 24px; background: var(--quest); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 12px; }
+
+        /* P2P NETWORK VIEW */
+        .p2p-view { display: flex; flex-direction: column; gap: 20px; }
+        .network-visualization {
+            height: 300px; background: var(--cell); border-radius: 20px; position: relative;
+            overflow: hidden; border: 1px solid var(--p2p-dim);
+        }
+        .network-canvas { width: 100%; height: 100%; }
+        .peer-node {
+            position: absolute; width: 48px; height: 48px; background: var(--p2p);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 20px; animation: pulse-glow 3s infinite; cursor: pointer;
+            transition: all 0.3s; z-index: 10;
+        }
+        .peer-node:hover { transform: scale(1.2); z-index: 100; }
+        .peer-node.self { background: var(--life); animation: breathe 3s infinite; }
+        .peer-connection {
+            position: absolute; height: 2px; background: linear-gradient(90deg, var(--p2p), transparent);
+            transform-origin: left center; opacity: 0.6; animation: data-flow 2s linear infinite;
+        }
+        
+        .peers-list { padding: 16px; }
+        .peer-item {
+            display: flex; align-items: center; gap: 16px;
+            padding: 16px; background: var(--cell);
+            border: 1.5px solid var(--membrane); border-radius: 16px;
+            margin-bottom: 12px; cursor: pointer; transition: all 0.2s;
+        }
+        .peer-item:active { transform: scale(0.98); }
+        .peer-item.connected { border-color: var(--p2p); }
+        .peer-avatar {
+            width: 48px; height: 48px; border-radius: 50%;
+            background: var(--membrane); display: flex; align-items: center;
+            justify-content: center; font-size: 24px;
+        }
+        .peer-info { flex: 1; }
+        .peer-name { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+        .peer-status { font-size: 13px; opacity: 0.6; }
+        .peer-action { font-size: 20px; }
+
+        .sync-panel {
+            background: var(--cell); border: 1px solid var(--p2p-dim); border-radius: 16px;
+            padding: 20px; margin-top: 20px;
+        }
+        .sync-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .sync-title { font-size: 16px; font-weight: bold; color: var(--p2p); }
+        .sync-status { font-size: 12px; color: var(--dim); }
+        .sync-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 8px;
+        }
+        .sync-name { font-size: 13px; }
+        .sync-progress { width: 100px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+        .sync-bar { height: 100%; background: var(--p2p); border-radius: 2px; transition: width 0.3s; }
+
+        /* CHAT INTERFACE */
+        .chat-container {
+            display: flex; flex-direction: column; height: 100%;
+        }
+        .chat-messages {
+            flex: 1; overflow-y: auto; padding: 16px;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        .chat-message {
+            max-width: 80%; padding: 12px 16px; border-radius: 18px;
+            font-size: 15px; line-height: 1.4; word-wrap: break-word;
+        }
+        .chat-message.mine {
+            align-self: flex-end; background: var(--life); color: #000;
+            border-bottom-right-radius: 4px;
+        }
+        .chat-message.theirs {
+            align-self: flex-start; background: var(--membrane);
+            border-bottom-left-radius: 4px;
+        }
+        .chat-message.system {
+            align-self: center; background: transparent; color: var(--dim);
+            font-size: 13px; font-style: italic;
+        }
+        .chat-meta { font-size: 11px; opacity: 0.6; margin-top: 4px; }
+
+        .chat-input-area {
+            padding: 16px; background: var(--cell);
+            border-top: 1px solid var(--membrane);
+        }
+        .chat-input-container {
+            display: flex; gap: 12px; align-items: flex-end;
+        }
+        .chat-input {
+            flex: 1; min-height: 48px; max-height: 120px;
+            padding: 12px 16px; background: rgba(0,0,0,0.3);
+            border: 1.5px solid var(--membrane); border-radius: 24px;
+            color: var(--text); font-size: 16px; font-family: inherit;
+            resize: none; outline: none;
+        }
+        .chat-input:focus { border-color: var(--life); }
+        .chat-send {
+            width: 48px; height: 48px; border-radius: 50%;
+            background: var(--life); color: #000; border: none;
+            font-size: 20px; cursor: pointer; display: flex;
+            align-items: center; justify-content: center;
+        }
+        .chat-send:active { transform: scale(0.9); }
+
+        /* STELLAR LAB */
+        .lab-interface { display: flex; flex-direction: column; gap: 20px; }
+        .experiment-card {
+            background: var(--cell); border: 1px solid var(--stellar); border-radius: 20px;
+            padding: 24px; position: relative; overflow: hidden;
+        }
+        .experiment-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--stellar), transparent);
+            animation: scan 3s infinite;
+        }
+        .exp-header { display: flex; justify-content: space-between; margin-bottom: 16px; }
+        .exp-id { font-family: monospace; font-size: 11px; color: var(--stellar); }
+        .exp-status { width: 8px; height: 8px; background: var(--life); border-radius: 50%; animation: pulse-glow 2s infinite; }
+        .exp-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; }
+        .exp-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px; }
+        .metric { text-align: center; }
+        .metric-value { font-size: 24px; font-weight: bold; color: var(--stellar); }
+        .metric-label { font-size: 10px; text-transform: uppercase; opacity: 0.6; margin-top: 4px; }
+
+        .lab-console {
+            background: rgba(0,0,0,0.5); border: 1px solid var(--stellar); border-radius: 16px;
+            padding: 20px; font-family: 'Courier New', monospace; font-size: 12px;
+            max-height: 200px; overflow-y: auto;
+        }
+        .console-line { margin-bottom: 8px; opacity: 0.8; }
+        .console-line.new { color: var(--life); opacity: 1; }
+
+        /* UNIVERSE VIEW */
+        .universe-view { display: flex; justify-content: center; align-items: center; min-height: 100%; }
+        .orbit-system { width: min(400px, 90vw); aspect-ratio: 1; position: relative; }
+        .center-self {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 80px; height: 80px; background: radial-gradient(circle, var(--universe) 0%, transparent 70%);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; color: #000; box-shadow: 0 0 60px var(--universe); z-index: 10;
+        }
+        .orbit {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            border: 1px solid rgba(57,255,20,0.2); border-radius: 50%;
+            animation: rotate 60s linear infinite;
+        }
+        .orbit-node {
+            position: absolute; width: 48px; height: 48px; background: var(--cell);
+            border: 2px solid var(--universe); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            transition: all 0.3s; font-size: 20px;
+        }
+        .orbit-node:hover { transform: scale(1.2); box-shadow: 0 0 30px var(--universe); }
+
+        /* RESONA WEB */
+        .resona-web { position: relative; height: 500px; }
+        .resonance-node {
+            position: absolute; width: 64px; height: 64px; border-radius: 50%;
+            background: radial-gradient(circle, var(--resona) 0%, transparent 70%);
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            animation: pulse-glow 4s infinite; transition: all 0.3s;
+        }
+        .resonance-node:hover { transform: scale(1.3); z-index: 100; }
+
+        /* TRANSFER PANEL */
+        .transfer-panel {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: var(--cell); border-top: 1px solid var(--membrane);
+            padding: 20px; max-height: 70vh; overflow-y: auto;
+            transform: translateY(100%); transition: transform 0.3s;
+            z-index: 200; border-radius: 24px 24px 0 0;
+        }
+        .transfer-panel.active { transform: translateY(0); }
+
+        .transfer-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px;
+        }
+        .transfer-title { font-size: 18px; font-weight: bold; }
+        .transfer-close { font-size: 24px; cursor: pointer; opacity: 0.6; }
+
+        .transfer-options {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+            margin-bottom: 20px;
+        }
+        .transfer-option {
+            display: flex; flex-direction: column; align-items: center;
+            gap: 8px; padding: 16px 8px; background: rgba(255,255,255,0.03);
+            border: 1.5px solid var(--membrane); border-radius: 16px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .transfer-option:active { transform: scale(0.95); }
+        .transfer-option:hover { border-color: var(--life); }
+
+        .qr-container {
+            background: white; padding: 20px; border-radius: 16px;
+            display: flex; justify-content: center; margin: 20px 0;
+        }
+
+        /* FAB */
+        .fab-container {
+            position: fixed; bottom: calc(24px + var(--safe-bottom)); right: 24px;
+            z-index: 50; display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
+        }
+        .fab-menu { display: none; flex-direction: column; gap: 10px; align-items: flex-end; }
+        .fab-menu.open { display: flex; animation: slide-up 0.2s ease; }
+        .fab-option {
+            display: flex; align-items: center; gap: 12px; padding: 14px 20px;
+            background: var(--cell); border: 1.5px solid var(--membrane);
+            border-radius: 28px; font-size: 15px; font-weight: 600;
+            cursor: pointer; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .fab {
+            width: 64px; height: 64px; border-radius: 50%; border: none;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+            transition: all 0.2s; background: var(--cell); color: var(--text);
+            border: 2px solid var(--membrane);
+        }
+        .fab.main { background: var(--life); color: #000; border-color: var(--life); }
+        .fab:active { transform: scale(0.9); }
+
+        /* INJECTION FAB (Legacy) */
+        .injection-fab {
+            position: fixed; bottom: calc(100px + var(--safe-bottom)); right: 24px; width: 56px; height: 56px;
+            background: var(--neural); border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: #fff; cursor: pointer; box-shadow: 0 8px 32px var(--neural-dim);
+            transition: all 0.3s; z-index: 100; border: none;
+        }
+        .injection-fab:hover { transform: scale(1.1); box-shadow: 0 12px 48px var(--neural); }
+        .injection-fab.processing { animation: pulse-glow 1s infinite; pointer-events: none; }
+
+        /* TOASTS & MODALS */
+        .toast {
+            position: fixed; bottom: calc(100px + var(--safe-bottom)); left: 50%;
+            transform: translateX(-50%) translateY(100px); background: var(--cell);
+            border: 1.5px solid var(--life); color: var(--life);
+            padding: 16px 24px; border-radius: 12px; font-size: 15px; font-weight: 600;
+            z-index: 300; opacity: 0; transition: all 0.3s; pointer-events: none;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        .construction-toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-200%);
+            background: var(--cell); border: 1px solid var(--life); border-radius: 20px;
+            padding: 24px; max-width: min(90vw, 500px); width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8); z-index: 10001;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .construction-toast.show { transform: translateX(-50%) translateY(0); }
+        .toast-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+        .toast-icon { width: 48px; height: 48px; background: var(--life); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .toast-title { font-size: 18px; font-weight: bold; color: var(--life); }
+        .toast-desc { font-size: 14px; line-height: 1.6; opacity: 0.9; margin-bottom: 16px; }
+        .toast-features { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+        .toast-tag { background: var(--life-dim); color: var(--life); padding: 6px 12px; border-radius: 20px; font-size: 11px; border: 1px solid var(--life); }
+        .toast-actions { display: flex; gap: 12px; }
+        .toast-btn { flex: 1; padding: 12px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; }
+        .toast-btn.primary { background: var(--life); color: #000; }
+        .toast-btn.secondary { background: transparent; border: 1px solid var(--dim); color: var(--text); }
+
+        .evolution-modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none;
+            justify-content: center; align-items: center; z-index: 10002; padding: 20px;
+        }
+        .evolution-modal.show { display: flex; }
+        .evo-card {
+            background: var(--cell); border: 1px solid var(--amber); border-radius: 24px;
+            padding: 32px; max-width: 400px; width: 100%; animation: emerge 0.4s ease;
+        }
+        .evo-title { font-size: 20px; font-weight: bold; color: var(--amber); margin-bottom: 16px; }
+        .evo-reason { font-size: 14px; line-height: 1.6; margin-bottom: 24px; opacity: 0.9; }
+        .evo-actions { display: flex; gap: 12px; }
+        .evo-btn { flex: 1; padding: 16px; border-radius: 12px; border: none; cursor: pointer; font-weight: 600; }
+        .evo-btn.evolve { background: var(--life); color: #000; }
+        .evo-btn.delay { background: transparent; border: 1px solid var(--dim); color: var(--text); }
+
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+            display: none; align-items: center; justify-content: center;
+            z-index: 400; padding: 20px; backdrop-filter: blur(8px);
+        }
+        .modal-overlay.show { display: flex; animation: fade-in 0.3s; }
+        .modal {
+            background: var(--cell); border: 2px solid var(--life);
+            border-radius: 28px; padding: 32px 24px; width: 100%; max-width: 420px;
+            text-align: center;
+        }
+        .modal-icon { font-size: 48px; margin-bottom: 16px; }
+        .modal-title { font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+        .modal-text { font-size: 16px; opacity: 0.9; line-height: 1.5; margin-bottom: 28px; }
+
+        /* PANELS */
+        .rag-panel, .activity-panel {
+            position: fixed; top: 0; bottom: 0; width: min(400px, 90vw);
+            background: var(--cell); transition: transform 0.3s; z-index: 200;
+            display: flex; flex-direction: column;
+        }
+        .rag-panel { right: 0; border-left: 1px solid var(--neural); transform: translateX(100%); }
+        .rag-panel.open { transform: translateX(0); }
+        .activity-panel { left: 0; border-right: 1px solid var(--life); transform: translateX(-100%); }
+        .activity-panel.open { transform: translateX(0); }
+
+        .panel-header { padding: 24px; border-bottom: 1px solid var(--membrane); display: flex; justify-content: space-between; align-items: center; }
+        .panel-title { font-size: 18px; font-weight: bold; }
+        .panel-close { background: none; border: none; color: var(--text); font-size: 24px; cursor: pointer; }
+
+        .activity-toggle {
+            position: fixed; left: 20px; bottom: calc(100px + var(--safe-bottom)); width: 56px; height: 56px;
+            background: var(--cell); border: 1px solid var(--life); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            z-index: 150; font-size: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+
+        /* EMPTY STATE */
+        .empty-state { text-align: center; padding: 60px 24px; opacity: 0.6; }
+        .empty-icon { font-size: 64px; margin-bottom: 20px; }
+        .empty-title { font-size: 20px; font-weight: bold; margin-bottom: 8px; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- TRINITY PORTAL -->
+    <div class="trinity-portal" id="trinityPortal">
+        <div class="trinity-title">You-n-i-<span>verse</span></div>
+        <div class="trinity-gates">
+            <div class="gate stellar" onclick="enterTrinity('stellar')">
+                <div class="gate-icon">🔬</div>
+                <div class="gate-name">Stellar Proximology</div>
+                <div class="gate-desc">Anonymous science lab<br>Running experiments on node flows<br>Data without identity</div>
+            </div>
+            <div class="gate universe" onclick="enterTrinity('universe')">
+                <div class="gate-icon">🎮</div>
+                <div class="gate-name">The You-n-i-verse</div>
+                <div class="gate-desc">Gamified purpose discovery<br>Play your way to understanding<br>Experience as experiment</div>
+            </div>
+            <div class="gate resona" onclick="enterTrinity('resona')">
+                <div class="gate-icon">🌐</div>
+                <div class="gate-name">Resona</div>
+                <div class="gate-desc">Resonance network<br>Synchronicity & connection<br>Find your harmonic match</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN ORGANISM -->
+    <div class="organism" id="organism">
+        <!-- Header -->
+        <header class="organism-header">
+            <div class="organism-id">
+                <div class="life-pulse"></div>
+                <div class="organism-name">Cell-<span id="cellId">λ-7749</span></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="connection-mode offline" id="connectionMode">
+                    <span id="modeIcon">📴</span>
+                    <span id="modeText">Offline</span>
+                </div>
+                <div class="header-actions">
+                    <button class="icon-btn" id="chatToggle" onclick="toggleChatView()" title="Chat">💬</button>
+                    <button class="icon-btn" onclick="toggleTransferPanel()" title="Share">📡</button>
+                </div>
+            </div>
+        </header>
+
+        <nav class="perspective-nav">
+            <button class="perspective-btn hub active" onclick="switchView('hub')">◈ Hub</button>
+            <button class="perspective-btn stellar" onclick="switchView('stellar')">🔬 Lab</button>
+            <button class="perspective-btn universe" onclick="switchView('universe')">🎮 Play</button>
+            <button class="perspective-btn resona" onclick="switchView('resona')">🌐 Resona</button>
+            <button class="perspective-btn p2p" onclick="switchView('p2p')">📡 P2P</button>
+            <button class="perspective-btn" onclick="toggleRag()" style="margin-left: auto;">🧠 RAG</button>
+        </nav>
+
+        <div class="organism-body">
+            <!-- HUB VIEW -->
+            <div class="view active" id="view-hub">
+                <div class="hub-grid">
+                    <div class="hub-card" onclick="showSubView('opportunities')">
+                        <div class="hub-icon">💎</div>
+                        <div class="hub-title">Opportunities</div>
+                        <div class="hub-desc">Discover work, collaboration, and purpose-aligned opportunities in your network.</div>
+                        <div class="hub-meta"><span id="oppCount">0 available</span><span id="oppMeshCount">0 from mesh</span></div>
+                    </div>
+                    <div class="hub-card" onclick="showSubView('circles')">
+                        <div class="hub-icon">⬡</div>
+                        <div class="hub-title">Circles</div>
+                        <div class="hub-desc">Group economies and local collectives. Find your people by residency.</div>
+                        <div class="hub-meta"><span id="circleCount">3 active</span><span>147 members</span></div>
+                    </div>
+                    <div class="hub-card" onclick="showSubView('quests')">
+                        <div class="hub-icon">⚔️</div>
+                        <div class="hub-title">Quests</div>
+                        <div class="hub-desc">Dream realization system. Turn wishes into achievable missions.</div>
+                        <div class="hub-meta"><span id="questCount">12 available</span><span>4 in progress</span></div>
+                    </div>
+                    <div class="hub-card" onclick="switchView('p2p')">
+                        <div class="hub-icon">📡</div>
+                        <div class="hub-title">Network</div>
+                        <div class="hub-desc">Peer-to-peer intelligence sharing. Real connections, real data.</div>
+                        <div class="hub-meta"><span id="peerCountBadge">0 peers</span><span id="syncStatusBadge">Standby</span></div>
+                    </div>
+                    <div class="hub-card" onclick="toggleActivity()">
+                        <div class="hub-icon">📊</div>
+                        <div class="hub-title">Activity</div>
+                        <div class="hub-desc">Live feed of organism state, mutations, and collective intelligence.</div>
+                        <div class="hub-meta"><span>Live</span><span id="eventCount">0 events</span></div>
+                    </div>
+                </div>
+
+                <!-- Sub-views -->
+                <div id="sub-opportunities" class="hidden" style="margin-top: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3 style="font-size: 20px;">Opportunities</h3>
+                        <button style="padding: 10px 20px; background: var(--life); color: #000; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;" onclick="showCreateModal()">+ Create</button>
+                    </div>
+                    <div class="feed" id="opportunitiesFeed">
+                        <div class="empty-state">
+                            <div class="empty-icon">📭</div>
+                            <div class="empty-title">No opportunities yet</div>
+                            <div style="font-size: 15px; margin-bottom: 24px;">Create or sync to get started</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sub-circles" class="hidden" style="margin-top: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3 style="font-size: 20px;">Active Circles</h3>
+                        <button style="padding: 10px 20px; background: var(--circle); color: #000; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;" onclick="createCircle()">+ Form</button>
+                    </div>
+                    <div class="circles-list" id="circlesList"></div>
+                </div>
+
+                <div id="sub-quests" class="hidden" style="margin-top: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3 style="font-size: 20px;">Quest Board</h3>
+                        <button style="padding: 10px 20px; background: var(--quest); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;" onclick="createQuest()">+ Post</button>
+                    </div>
+                    <div class="quest-board" id="questBoard"></div>
+                </div>
+            </div>
+
+            <!-- P2P NETWORK VIEW -->
+            <div class="view" id="view-p2p">
+                <div class="p2p-view">
+                    <div class="network-visualization" id="networkViz">
+                        <svg class="network-canvas" id="networkCanvas"></svg>
+                        <div class="peer-node self" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">YOU</div>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="font-size: 18px;">Discovered Peers</h3>
+                        <button style="padding: 10px 20px; background: var(--p2p); color: #000; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;" onclick="broadcastDiscovery()">📢 Broadcast</button>
+                    </div>
+                    <div class="peers-list" id="peersList"></div>
+
+                    <div class="sync-panel">
+                        <div class="sync-header">
+                            <div class="sync-title">Active Syncs</div>
+                            <div class="sync-status" id="syncStatusText">Idle</div>
+                        </div>
+                        <div id="syncList">
+                            <div class="sync-item">
+                                <span class="sync-name">Waiting for P2P activation...</span>
+                                <div class="sync-progress"><div class="sync-bar" style="width: 0%"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STELLAR LAB VIEW -->
+            <div class="view" id="view-stellar">
+                <div class="lab-interface">
+                    <div class="experiment-card">
+                        <div class="exp-header"><span class="exp-id">EXP-0001-NODE-FLOW</span><div class="exp-status"></div></div>
+                        <div class="exp-title">Anonymous Node Analysis</div>
+                        <div style="font-size: 13px; opacity: 0.8;">Tracking input/output patterns across the network without identity correlation.</div>
+                        <div class="exp-metrics">
+                            <div class="metric"><div class="metric-value" id="metric-entropy">0.73</div><div class="metric-label">Entropy</div></div>
+                            <div class="metric"><div class="metric-value" id="metric-coherence">0.84</div><div class="metric-label">Coherence</div></div>
+                            <div class="metric"><div class="metric-value" id="metric-nodes">1</div><div class="metric-label">Active Nodes</div></div>
+                        </div>
+                    </div>
+                    <div class="lab-console" id="labConsole">
+                        <div class="console-line">> Stellar Proximology initialized...</div>
+                        <div class="console-line">> Anonymous addressing active...</div>
+                        <div class="console-line">> Awaiting node data streams...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UNIVERSE VIEW -->
+            <div class="view" id="view-universe">
+                <div class="universe-view">
+                    <div class="orbit-system">
+                        <div class="center-self">YOU</div>
+                        <div class="orbit" style="width: 200px; height: 200px; animation-duration: 30s;">
+                            <div class="orbit-node" style="top: -24px; left: 50%; transform: translateX(-50%);" onclick="activateOrbit('purpose')">🎯</div>
+                        </div>
+                        <div class="orbit" style="width: 320px; height: 320px; animation-duration: 45s; animation-direction: reverse;">
+                            <div class="orbit-node" style="top: 50%; right: -24px; transform: translateY(-50%);" onclick="activateOrbit('skills')">⚡</div>
+                            <div class="orbit-node" style="bottom: -24px; left: 50%; transform: translateX(-50%);" onclick="activateOrbit('passion')">🔥</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESONA VIEW -->
+            <div class="view" id="view-resona">
+                <div class="resona-web" id="resonaWeb"></div>
+            </div>
+
+            <!-- CHAT VIEW (Overlay) -->
+            <div class="view" id="chat-view" style="display: none; position: absolute; inset: 0; background: var(--void); z-index: 50; padding: 0;">
+                <div class="chat-container">
+                    <div style="padding: 16px; background: var(--cell); border-bottom: 1px solid var(--membrane); display: flex; align-items: center; gap: 12px;">
+                        <button class="icon-btn" onclick="toggleChatView()" style="width: 36px; height: 36px;">←</button>
+                        <div style="font-weight: 600;">Mesh Chat</div>
+                        <div style="margin-left: auto; font-size: 13px; opacity: 0.6;" id="chatPeerCount">0 peers</div>
+                    </div>
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-message system">Welcome to offline mesh chat. Messages sync when peers connect.</div>
+                    </div>
+                    <div class="chat-input-area">
+                        <div class="chat-input-container">
+                            <textarea class="chat-input" id="chatInput" placeholder="Type a message..." rows="1"></textarea>
+                            <button class="chat-send" onclick="sendChatMessage()">➤</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FLOATING ACTION BUTTONS -->
+    <div class="fab-container">
+        <div class="fab-menu" id="fabMenu">
+            <div class="fab-option" onclick="syncMesh()">🕸️ Sync Mesh</div>
+            <div class="fab-option" onclick="showCreateModal()">✨ New Opportunity</div>
+            <div class="fab-option" onclick="findMatches()">🎯 Find Match</div>
+        </div>
+        <button class="fab" onclick="toggleFabMenu()">⚡</button>
+        <button class="fab main" onclick="showCreateModal()">+</button>
+    </div>
+
+    <!-- INJECTION FAB (Legacy) -->
+    <button class="injection-fab" id="injectionFab" onclick="triggerInjection()">
+        <span id="fabContent">🧬</span>
+        <input type="file" id="fileInput" multiple style="display:none" onchange="processInjection(this.files)">
+    </button>
+
+    <!-- ACTIVITY TOGGLE -->
+    <div class="activity-toggle" onclick="toggleActivity()">📊</div>
+
+    <!-- TRANSFER PANEL -->
+    <div class="transfer-panel" id="transferPanel">
+        <div class="transfer-header">
+            <div class="transfer-title">📡 Share Data</div>
+            <div class="transfer-close" onclick="toggleTransferPanel()">✕</div>
+        </div>
+        <div class="transfer-options">
+            <div class="transfer-option" onclick="shareViaQR()">
+                <div style="font-size: 28px;">📷</div>
+                <div style="font-size: 12px;">QR Code</div>
+            </div>
+            <div class="transfer-option" onclick="shareViaSMS()">
+                <div style="font-size: 28px;">💬</div>
+                <div style="font-size: 12px;">SMS</div>
+            </div>
+            <div class="transfer-option" onclick="shareViaBluetooth()">
+                <div style="font-size: 28px;">📶</div>
+                <div style="font-size: 12px;">Bluetooth</div>
+            </div>
+            <div class="transfer-option" onclick="exportData()">
+                <div style="font-size: 28px;">💾</div>
+                <div style="font-size: 12px;">Export</div>
+            </div>
+        </div>
+        <div id="transferContent"></div>
+    </div>
+
+    <!-- CREATE OPPORTUNITY MODAL -->
+    <div class="modal-overlay" id="createModal">
+        <div class="modal">
+            <div class="modal-icon">✨</div>
+            <div class="modal-title">Create Opportunity</div>
+            <input type="text" id="oppTitle" placeholder="Title" style="width: 100%; margin-bottom: 12px; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--membrane); border-radius: 12px; color: var(--text); font-size: 16px;">
+            <textarea id="oppDesc" placeholder="Description" rows="3" style="width: 100%; margin-bottom: 12px; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--membrane); border-radius: 12px; color: var(--text); font-size: 16px; resize: vertical;"></textarea>
+            <input type="text" id="oppComp" placeholder="Compensation" style="width: 100%; margin-bottom: 20px; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--membrane); border-radius: 12px; color: var(--text); font-size: 16px;">
+            <div style="display: flex; gap: 12px;">
+                <button class="btn btn-secondary" style="flex: 1;" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" style="flex: 1;" onclick="saveOpportunity()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONSTRUCTION TOAST -->
+    <div class="construction-toast" id="constructionToast">
+        <div class="toast-header">
+            <div class="toast-icon">🏗️</div>
+            <div class="toast-title" id="toastTitle">New Space Constructed</div>
+        </div>
+        <div class="toast-desc" id="toastDesc">The organism has analyzed your input and built new functionality.</div>
+        <div class="toast-features" id="toastFeatures"></div>
+        <div class="toast-actions">
+            <button class="toast-btn primary" onclick="exploreNewSpace()">Explore</button>
+            <button class="toast-btn secondary" onclick="dismissToast()">Later</button>
+        </div>
+    </div>
+
+    <!-- EVOLUTION MODAL -->
+    <div class="evolution-modal" id="evolutionModal">
+        <div class="evo-card">
+            <div class="evo-title">🧬 Evolution Proposal</div>
+            <div class="evo-reason" id="evoReason">The organism has detected an opportunity for mutual growth.</div>
+            <div class="evo-actions">
+                <button class="evo-btn evolve" onclick="approveEvolution()">Evolve</button>
+                <button class="evo-btn delay" onclick="postponeEvolution()">Later</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RAG PANEL -->
+    <div class="rag-panel" id="ragPanel">
+        <div class="panel-header">
+            <div class="panel-title" style="color: var(--neural);">🧠 Knowledge Base</div>
+            <button class="panel-close" onclick="toggleRag()">×</button>
+        </div>
+        <div style="display: flex; gap: 4px; padding: 12px 24px; border-bottom: 1px solid var(--membrane);">
+            <button class="perspective-btn active" onclick="switchRagTab('internal')" style="flex: 1;">Internal</button>
+            <button class="perspective-btn" onclick="switchRagTab('network')" style="flex: 1;">Network</button>
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding: 24px;" id="ragContent"></div>
+    </div>
+
+    <!-- ACTIVITY PANEL -->
+    <div class="activity-panel" id="activityPanel">
+        <div class="panel-header">
+            <div class="panel-title" style="color: var(--life);">📊 Live Activity</div>
+            <button class="panel-close" onclick="toggleActivity()">×</button>
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding: 20px;" id="activityFeed"></div>
+    </div>
+
+    <script>
+        // ==================== CONFIGURATION ====================
+        const CONFIG = {
+            ICE_SERVERS: {
+                iceServers: [
+                    { urls: "stun:stun.l.google.com:19302" },
+                    { urls: "stun:stun1.l.google.com:19302" },
+                    { urls: "stun:stun2.l.google.com:19302" },
+                    { urls: "stun:stun3.l.google.com:19302" },
+                    { urls: "stun:stun4.l.google.com:19302" },
+                    {
+                        urls: "turn:openrelay.metered.ca:80",
+                        username: "openrelayproject",
+                        credential: "openrelayproject"
+                    },
+                    {
+                        urls: "turn:openrelay.metered.ca:443",
+                        username: "openrelayproject",
+                        credential: "openrelayproject"
+                    }
+                ],
+                iceCandidatePoolSize: 10
+            },
+            SIGNALING_SERVERS: [
+                'wss://hyperswarm.mauve.moe',
+                'wss://signal.dat-eco.org',
+                'wss://signal.mauve.moe'
+            ],
+            MAX_PEERS: 12,
+            PEER_TIMEOUT: 300000,
+            DB_VERSION: 1
+        };
+
+        // ==================== CORE STATE ====================
+        let pyodide = null;
+        let currentView = 'hub';
+        let cellData = { id: 'λ-' + Math.floor(Math.random()*9000+1000), version: 1, symbiosis: 65 };
+        
+        // Unified State
+        const state = {
+            mode: 'offline',
+            opportunities: [],
+            peers: new Map(),
+            messages: [],
+            myProfile: { id: 'user-' + Math.random().toString(36).substr(2, 9), name: 'Anonymous' },
+            dataStore: null,
+            hyperswarm: null,
+            chatOpen: false,
+            circles: [],
+            quests: [],
+            knowledgeBase: [],
+            activityLog: [],
+            pendingEvolution: null
+        };
+
+        // ==================== INITIALIZATION ====================
+        async function init() {
+            try {
+                // Init Pyodide for RAG
+                pyodide = await loadPyodide();
+                await pyodide.loadPackage(['numpy', 'pandas', 'json', 're']);
+                await initRagSystems();
+                
+                // Init IndexedDB
+                await initDatabase();
+                await loadData();
+                
+                // Set cell ID
+                document.getElementById('cellId').textContent = cellData.id;
+                
+                // Init Hyperswarm
+                await initHyperswarm();
+                
+                // Setup UI
+                setupUI();
+                initializeData();
+                
+                // Event Listeners
+                window.addEventListener('online', () => { showToast('Online'); setMode('online'); });
+                window.addEventListener('offline', () => { showToast('Offline mode'); setMode('offline'); });
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible' && state.mode === 'mesh' && state.peers.size === 0) {
+                        initHyperswarm();
+                    }
+                });
+                
+                setInterval(cleanupPeers, 60000);
+                logActivity('Organism initialized. Mesh network ready.', 'system');
+                
+            } catch (err) {
+                console.error('Init error:', err);
+                showToast('Error: ' + err.message);
+            }
+        }
+
+        async function initRagSystems() {
+            await pyodide.runPythonAsync(`
+                import json
+                import re
+                from collections import defaultdict
+                
+                class DualRAG:
+                    def __init__(self):
+                        self.internal_docs = []
+                        self.network_cache = []
+                        
+                    def ingest_document(self, content, source, doc_type='internal'):
+                        doc = {
+                            'id': len(self.internal_docs if doc_type == 'internal' else self.network_cache),
+                            'source': source,
+                            'content': content[:5000],
+                            'chunks': [content[i:i+500] for i in range(0, len(content), 500)],
+                            'type': doc_type,
+                            'timestamp': __import__('time').time()
+                        }
+                        if doc_type == 'internal':
+                            self.internal_docs.append(doc)
+                        else:
+                            self.network_cache.append(doc)
+                        return doc['id']
+                    
+                    def query(self, query, source='both'):
+                        results = []
+                        q_words = set(query.lower().split())
+                        
+                        for doc in (self.internal_docs if source in ['internal', 'both'] else []) + \
+                                  (self.network_cache if source in ['network', 'both'] else []):
+                            c_words = set(doc['content'].lower().split())
+                            score = len(q_words & c_words) / len(q_words) if q_words else 0
+                            if score > 0.2:
+                                results.append({**doc, 'score': score})
+                        
+                        return sorted(results, key=lambda x: x['score'], reverse=True)[:5]
+                
+                rag = DualRAG()
+            `);
+        }
+
+        async function initDatabase() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('YuniVerse-v1', CONFIG.DB_VERSION);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => { state.dataStore = request.result; resolve(); };
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('opportunities')) {
+                        db.createObjectStore('opportunities', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('messages')) {
+                        db.createObjectStore('messages', { keyPath: 'id', autoIncrement: true });
+                    }
+                    if (!db.objectStoreNames.contains('peers')) {
+                        db.createObjectStore('peers', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('knowledge')) {
+                        db.createObjectStore('knowledge', { keyPath: 'id', autoIncrement: true });
+                    }
+                };
+            });
+        }
+
+        // ==================== HYPERSWARM P2P ====================
+        async function initHyperswarm() {
+            try {
+                if (state.hyperswarm) {
+                    try { state.hyperswarm.destroy(); } catch (e) {}
+                }
+
+                const { default: HyperSwarmWebRTC } = await import('https://cdn.jsdelivr.net/npm/@hyperswarm/webrtc@1.0.0/dist/bundle.min.js');
+                
+                const swarm = new HyperSwarmWebRTC({
+                    bootstrap: CONFIG.SIGNALING_SERVERS,
+                    maxPeers: CONFIG.MAX_PEERS,
+                    webrtc: { config: CONFIG.ICE_SERVERS }
+                });
+                
+                state.hyperswarm = swarm;
+                
+                const topic = topicFromString('yuni-purpose-v2');
+                await swarm.join(topic, { client: true, server: true });
+                
+                swarm.on('connection', (conn, info) => {
+                    const peerId = info.publicKey ? 
+                        Array.from(info.publicKey).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16) 
+                        : 'unknown';
+                    handlePeerConnection(peerId, conn);
+                });
+                
+                setMode('mesh');
+                showToast('Mesh network active');
+                logActivity('P2P mesh initialized', 'system');
+                
+            } catch (err) {
+                console.error('Hyperswarm init failed:', err);
+                setMode('offline');
+                // Simulate for demo
+                setTimeout(() => simulateP2P(), 3000);
+            }
+        }
+
+        function handlePeerConnection(peerId, conn) {
+            const peer = {
+                id: peerId,
+                conn: conn,
+                lastSeen: Date.now(),
+                name: 'Peer ' + peerId.substring(0, 6),
+                data: {}
+            };
+            state.peers.set(peerId, peer);
+            updatePeersList();
+            setMode('mesh');
+            
+            conn.on('data', (data) => {
+                try {
+                    const msg = JSON.parse(bufferToString(data));
+                    handlePeerMessage(peerId, msg);
+                } catch (e) { console.error('Invalid message:', e); }
+            });
+            
+            conn.on('error', (err) => {
+                state.peers.delete(peerId);
+                updatePeersList();
+            });
+            
+            conn.on('close', () => {
+                state.peers.delete(peerId);
+                updatePeersList();
+                if (state.peers.size === 0) setMode('offline');
+            });
+            
+            // Send handshake
+            const encoder = new TextEncoder();
+            conn.write(encoder.encode(JSON.stringify({
+                type: 'handshake',
+                cellId: cellData.id,
+                profile: state.myProfile,
+                opportunities: state.opportunities.filter(o => o.syncStatus === 'local').length,
+                timestamp: Date.now()
+            })));
+            
+            showToast(`Connected: ${peer.name}`);
+            logActivity(`Peer connected: ${peerId.substring(0,8)}`, 'network');
+        }
+
+        function handlePeerMessage(peerId, msg) {
+            const peer = state.peers.get(peerId);
+            if (peer) peer.lastSeen = Date.now();
+            
+            switch(msg.type) {
+                case 'handshake':
+                    peer.data = msg;
+                    logActivity(`Discovered peer ${msg.cellId} with ${msg.opportunities} opportunities`, 'network');
+                    updatePeersList();
+                    break;
+                    
+                case 'sync':
+                    if (msg.opportunities) {
+                        msg.opportunities.forEach(opp => {
+                            opp.source = 'mesh';
+                            cacheOpportunity(opp);
+                        });
+                    }
+                    if (msg.messages) {
+                        msg.messages.forEach(m => {
+                            if (!state.messages.find(existing => existing.id === m.id)) {
+                                addMessage(m, false);
+                            }
+                        });
+                    }
+                    break;
+                    
+                case 'chat':
+                    addMessage({
+                        id: msg.id,
+                        text: msg.text,
+                        author: msg.author,
+                        timestamp: msg.timestamp,
+                        peerId: peerId
+                    }, false);
+                    break;
+                    
+                case 'opportunity':
+                    cacheOpportunity({ ...msg.data, source: 'mesh' });
+                    break;
+            }
+        }
+
+        function broadcastToPeers(data) {
+            const encoder = new TextEncoder();
+            const payload = encoder.encode(JSON.stringify(data));
+            
+            state.peers.forEach(peer => {
+                try { peer.conn.write(payload); } 
+                catch (e) { console.error('Broadcast failed:', e); }
+            });
+        }
+
+        function topicFromString(str) {
+            const encoder = new TextEncoder();
+            const bytes = encoder.encode(str.padEnd(32));
+            return bytes.slice(0, 32);
+        }
+
+        function bufferToString(buf) {
+            return new TextDecoder().decode(buf);
+        }
+
+        function cleanupPeers() {
+            const now = Date.now();
+            let changed = false;
+            for (const [id, peer] of state.peers) {
+                if (now - peer.lastSeen > CONFIG.PEER_TIMEOUT) {
+                    try { peer.conn.destroy(); } catch (e) {}
+                    state.peers.delete(id);
+                    changed = true;
+                }
+            }
+            if (changed) {
+                updatePeersList();
+                if (state.peers.size === 0 && state.mode === 'mesh') setMode('offline');
+            }
+        }
+
+        // ==================== UI FUNCTIONS ====================
+        function enterTrinity(gate) {
+            document.getElementById('trinityPortal').classList.add('entered');
+            document.getElementById('organism').classList.add('active');
+            setTimeout(() => switchView(gate === 'stellar' ? 'stellar' : gate === 'universe' ? 'universe' : 'resona'), 100);
+            logActivity(`Entered through ${gate} gate`, 'system');
+        }
+
+        function switchView(view) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.perspective-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(`view-${view}`)?.classList.add('active');
+            document.querySelector(`.perspective-btn.${view}`)?.classList.add('active');
+            
+            if (view !== 'hub') {
+                document.getElementById('sub-opportunities')?.classList.add('hidden');
+                document.getElementById('sub-circles')?.classList.add('hidden');
+                document.getElementById('sub-quests')?.classList.add('hidden');
+            }
+            
+            currentView = view;
+        }
+
+        function showSubView(sub) {
+            document.getElementById('sub-opportunities')?.classList.add('hidden');
+            document.getElementById('sub-circles')?.classList.add('hidden');
+            document.getElementById('sub-quests')?.classList.add('hidden');
+            document.getElementById(`sub-${sub}`)?.classList.remove('hidden');
+        }
+
+        // ==================== OPPORTUNITIES ====================
+        async function cacheOpportunity(opp) {
+            if (!opp.id) opp.id = 'opp-' + Date.now();
+            if (!state.opportunities.find(o => o.id === opp.id)) {
+                opp.syncStatus = opp.syncStatus || 'cached';
+                opp.timestamp = opp.timestamp || Date.now();
+                state.opportunities.push(opp);
+                
+                if (state.dataStore) {
+                    const tx = state.dataStore.transaction(['opportunities'], 'readwrite');
+                    tx.objectStore('opportunities').put(opp);
+                }
+                
+                renderOpportunities();
+                updateHubStats();
+                return true;
+            }
+            return false;
+        }
+
+        function renderOpportunities() {
+            const container = document.getElementById('opportunitiesFeed');
+            if (state.opportunities.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <div class="empty-title">No opportunities yet</div>
+                        <div style="font-size: 15px; margin-bottom: 24px;">Create or sync to get started</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = state.opportunities.map(opp => `
+                <div class="opportunity-card ${opp.source || 'local'}">
+                    <div class="card-header">
+                        <span class="card-type">${escapeHtml(opp.type || 'Work')}</span>
+                        <span class="card-source">${opp.source === 'mesh' ? '🕸️' : '📝'}</span>
+                    </div>
+                    <div class="card-title">${escapeHtml(opp.title)}</div>
+                    <div class="card-desc">${escapeHtml(opp.desc)}</div>
+                    <div class="card-footer">
+                        <span class="card-compensation">${escapeHtml(opp.compensation || 'Negotiable')}</span>
+                        <div class="card-actions">
+                            <button class="btn btn-secondary" onclick="shareOpportunity('${opp.id}')">Share</button>
+                            <button class="btn btn-primary">Connect</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showCreateModal() {
+            document.getElementById('createModal').classList.add('show');
+            closeFabMenu();
+        }
+
+        function closeModal() {
+            document.getElementById('createModal').classList.remove('show');
+        }
+
+        function saveOpportunity() {
+            const opp = {
+                id: 'opp-' + Date.now(),
+                title: document.getElementById('oppTitle').value || 'New Opportunity',
+                desc: document.getElementById('oppDesc').value || 'No description',
+                compensation: document.getElementById('oppComp').value || 'Negotiable',
+                type: 'Local',
+                syncStatus: 'local',
+                timestamp: Date.now(),
+                source: 'local'
+            };
+            
+            cacheOpportunity(opp);
+            broadcastToPeers({ type: 'opportunity', data: opp });
+            closeModal();
+            showToast('Opportunity created!');
+            logActivity('Created opportunity: ' + opp.title, 'user');
+            
+            document.getElementById('oppTitle').value = '';
+            document.getElementById('oppDesc').value = '';
+            document.getElementById('oppComp').value = '';
+        }
+
+        function shareOpportunity(id) {
+            const opp = state.opportunities.find(o => o.id === id);
+            if (opp) {
+                broadcastToPeers({ type: 'opportunity', data: opp });
+                showToast('Shared to mesh!');
+            }
+        }
+
+        // ==================== PEERS ====================
+        function updatePeersList() {
+            const container = document.getElementById('peersList');
+            const count = state.peers.size;
+            
+            document.getElementById('peerCountBadge').textContent = count + ' peer' + (count !== 1 ? 's' : '');
+            document.getElementById('peerCount').textContent = `(${count})`;
+            document.getElementById('chatPeerCount').textContent = `${count} peers`;
+            
+            if (count === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🕸️</div>
+                        <div class="empty-title">No peers connected</div>
+                        <div style="font-size: 15px;">Your mesh network will appear here</div>
+                    </div>
+                `;
+                updateNetworkViz();
+                return;
+            }
+            
+            container.innerHTML = Array.from(state.peers.values()).map(peer => `
+                <div class="peer-item connected" onclick="openPrivateChat('${peer.id}')">
+                    <div class="peer-avatar">${peer.data.cellId?.charAt(0) || '?'}</div>
+                    <div class="peer-info">
+                        <div class="peer-name">${escapeHtml(peer.data.cellId || peer.name)}</div>
+                        <div class="peer-status">Connected • ${formatTime(peer.lastSeen)}</div>
+                    </div>
+                    <div class="peer-action">💬</div>
+                </div>
+            `).join('');
+            
+            updateNetworkViz();
+        }
+
+        function updateNetworkViz() {
+            const viz = document.getElementById('networkViz');
+            
+            // Clear existing peer nodes (keep self)
+            viz.querySelectorAll('.peer-node:not(.self)').forEach(n => n.remove());
+            viz.querySelectorAll('.peer-connection').forEach(c => c.remove());
+            
+            const selfRect = viz.getBoundingClientRect();
+            const centerX = selfRect.width / 2;
+            const centerY = selfRect.height / 2;
+            
+            let angle = 0;
+            const radius = Math.min(centerX, centerY) * 0.7;
+            
+            state.peers.forEach((peer, id) => {
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                
+                const node = document.createElement('div');
+                node.className = 'peer-node';
+                node.style.left = x + 'px';
+                node.style.top = y + 'px';
+                node.textContent = peer.data.cellId?.charAt(0) || '?';
+                viz.appendChild(node);
+                
+                const line = document.createElement('div');
+                line.className = 'peer-connection';
+                const length = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+                const rotate = Math.atan2(y - centerY, x - centerX) * 180 / Math.PI;
+                line.style.width = length + 'px';
+                line.style.left = centerX + 'px';
+                line.style.top = centerY + 'px';
+                line.style.transform = `rotate(${rotate}deg)`;
+                viz.appendChild(line);
+                
+                angle += (Math.PI * 2) / state.peers.size;
+            });
+        }
+
+        function broadcastDiscovery() {
+            if (state.mode !== 'mesh') {
+                showToast('Starting mesh...');
+                initHyperswarm();
+                return;
+            }
+            
+            broadcastToPeers({
+                type: 'sync',
+                profile: state.myProfile,
+                opportunities: state.opportunities.filter(o => o.syncStatus === 'local'),
+                messages: state.messages.slice(-10)
+            });
+            
+            showToast(`Broadcast sent to ${state.peers.size} peers`);
+        }
+
+        function syncMesh() {
+            broadcastDiscovery();
+            closeFabMenu();
+        }
+
+        // ==================== CHAT ====================
+        function toggleChatView() {
+            state.chatOpen = !state.chatOpen;
+            const chatView = document.getElementById('chat-view');
+            const chatBtn = document.getElementById('chatToggle');
+            
+            if (state.chatOpen) {
+                chatView.style.display = 'block';
+                chatBtn.classList.add('active');
+                setTimeout(() => document.getElementById('chatInput').focus(), 100);
+            } else {
+                chatView.style.display = 'none';
+                chatBtn.classList.remove('active');
+            }
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+            
+            const msg = {
+                id: 'msg-' + Date.now(),
+                text: text,
+                author: state.myProfile.name,
+                timestamp: Date.now(),
+                peerId: 'me'
+            };
+            
+            addMessage(msg, true);
+            broadcastToPeers({ type: 'chat', ...msg });
+            input.value = '';
+            input.style.height = 'auto';
+        }
+
+        function addMessage(msg, isMine) {
+            state.messages.push(msg);
+            
+            const container = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = `chat-message ${isMine ? 'mine' : 'theirs'}`;
+            div.innerHTML = `
+                ${escapeHtml(msg.text)}
+                <div class="chat-meta">${escapeHtml(msg.author)} • ${formatTime(msg.timestamp)}</div>
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            
+            if (state.dataStore) {
+                const tx = state.dataStore.transaction(['messages'], 'readwrite');
+                tx.objectStore('messages').put(msg);
+            }
+        }
+
+        function openPrivateChat(peerId) {
+            toggleChatView();
+            showToast(`Chat with ${peerId.substring(0, 6)}...`);
+        }
+
+        // ==================== TRANSFER METHODS ====================
+        function toggleTransferPanel() {
+            document.getElementById('transferPanel').classList.toggle('active');
+            document.getElementById('transferContent').innerHTML = '';
+        }
+
+        function shareViaQR() {
+            const data = preparePayload();
+            document.getElementById('transferContent').innerHTML = `
+                <div class="qr-container">
+                    <canvas id="qrCanvas"></canvas>
+                </div>
+                <div style="text-align: center; font-size: 13px; opacity: 0.7;">
+                    ${data.length} bytes • Scan to import
+                </div>
+            `;
+            QRCode.toCanvas(document.getElementById('qrCanvas'), data, { width: 260, margin: 2 });
+        }
+
+        function shareViaSMS() {
+            const data = preparePayload();
+            const smsBody = encodeURIComponent('YUNI:' + data);
+            window.location.href = `sms:?body=${smsBody}`;
+            showToast('SMS app opened');
+        }
+
+        async function shareViaBluetooth() {
+            try {
+                const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
+                await device.gatt.connect();
+                showToast(`Connected to ${device.name}`);
+            } catch (err) {
+                showToast('Bluetooth failed: ' + err.message);
+            }
+        }
+
+        function exportData() {
+            const data = { opportunities: state.opportunities, messages: state.messages, profile: state.myProfile };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `yuni-${Date.now()}.json`; a.click();
+            URL.revokeObjectURL(url);
+            showToast('Exported!');
+        }
+
+        function preparePayload() {
+            const payload = {
+                opps: state.opportunities.slice(0, 3).map(o => ({
+                    t: o.title?.substring(0, 20), d: o.desc?.substring(0, 40)
+                })),
+                msgs: state.messages.slice(-3).map(m => ({ t: m.text?.substring(0, 30) }))
+            };
+            return btoa(JSON.stringify(payload));
+        }
+
+        // ==================== LEGACY SYSTEMS ====================
+        function initializeData() {
+            state.circles = [
+                { name: 'Oak Street Collective', location: 'Downtown', members: 24, funds: 2400, purpose: 'Shared workspace' },
+                { name: 'Riverside Growers', location: 'Riverside', members: 18, funds: 1200, purpose: 'Urban agriculture' },
+                { name: 'Tech Resonance', location: 'Innovation Corridor', members: 42, funds: 8500, purpose: 'Skill sharing' }
+            ];
+            renderCircles();
+
+            state.quests = [
+                { title: 'Launch Community Garden', difficulty: '●●●○○', reward: '500 credits', type: 'collective', desc: 'Transform vacant lot' },
+                { title: 'Master Neural Interfaces', difficulty: '●●●●●', reward: 'Certification', type: 'personal', desc: 'BCI basics' },
+                { title: 'Build Mobile Clinic', difficulty: '●●●●○', reward: 'Medical supplies', type: 'collective', desc: 'Healthcare access' }
+            ];
+            renderQuests();
+        }
+
+        function renderCircles() {
+            const container = document.getElementById('circlesList');
+            if (!container) return;
+            container.innerHTML = state.circles.map(c => `
+                <div class="circle-item">
+                    <div class="circle-avatar">⬡</div>
+                    <div class="circle-info">
+                        <div class="circle-name">${c.name}</div>
+                        <div class="circle-location">📍 ${c.location}</div>
+                    </div>
+                    <div class="circle-economy">
+                        <div class="circle-funds">$${c.funds}</div>
+                        <div class="circle-members">${c.members} members</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderQuests() {
+            const container = document.getElementById('questBoard');
+            if (!container) return;
+            container.innerHTML = state.quests.map(q => `
+                <div class="quest-item">
+                    <div class="quest-difficulty">${q.difficulty}</div>
+                    <div class="quest-title">${q.title}</div>
+                    <div class="quest-desc">${q.desc}</div>
+                    <div class="quest-footer">
+                        <span class="quest-reward">🎁 ${q.reward}</span>
+                        <button class="quest-accept">Accept</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function triggerInjection() {
+            document.getElementById('fileInput').click();
+        }
+
+        function processInjection(files) {
+            const fab = document.getElementById('injectionFab');
+            fab.classList.add('processing');
+            
+            setTimeout(() => {
+                fab.classList.remove('processing');
+                showConstructionToast();
+            }, 2000);
+        }
+
+        function showConstructionToast() {
+            document.getElementById('constructionToast').classList.add('show');
+        }
+
+        function dismissToast() {
+            document.getElementById('constructionToast').classList.remove('show');
+        }
+
+        function exploreNewSpace() {
+            dismissToast();
+            switchView('stellar');
+        }
+
+        function toggleRag() {
+            document.getElementById('ragPanel').classList.toggle('open');
+        }
+
+        function toggleActivity() {
+            document.getElementById('activityPanel').classList.toggle('open');
+        }
+
+        function logActivity(message, type) {
+            const entry = { message, type, time: Date.now() };
+            state.activityLog.push(entry);
+            
+            const feed = document.getElementById('activityFeed');
+            const div = document.createElement('div');
+            div.style.cssText = 'padding: 12px; border-bottom: 1px solid var(--membrane); font-size: 13px;';
+            div.innerHTML = `<span style="opacity: 0.5;">${formatTime(entry.time)}</span> ${message}`;
+            feed.prepend(div);
+            
+            document.getElementById('eventCount').textContent = state.activityLog.length + ' events';
+        }
+
+        function activateOrbit(type) {
+            showToast(`Activating ${type} orbit...`);
+        }
+
+        function initResonaWeb() {
+            const container = document.getElementById('resonaWeb');
+            if (!container) return;
+            
+            const nodes = [
+                { x: 20, y: 30, icon: '🔮' },
+                { x: 60, y: 20, icon: '🌊' },
+                { x: 80, y: 60, icon: '⚡' },
+                { x: 40, y: 70, icon: '🎵' }
+            ];
+            
+            container.innerHTML = nodes.map((n, i) => `
+                <div class="resonance-node" style="left: ${n.x}%; top: ${n.y}%;" onclick="showToast('Resonance detected')">
+                    ${n.icon}
+                </div>
+            `).join('');
+        }
+
+        function simulateP2P() {
+            logActivity('Running in P2P simulation mode', 'system');
+            setMode('mesh');
+            
+            setTimeout(() => {
+                const fakePeer = {
+                    id: 'sim-peer-1',
+                    conn: { connected: true },
+                    lastSeen: Date.now(),
+                    name: 'Simulated Peer',
+                    data: { cellId: 'λ-1234', opportunities: 2, quests: 5 }
+                };
+                state.peers.set(fakePeer.id, fakePeer);
+                updatePeersList();
+                logActivity('Simulated peer discovered: λ-1234', 'system');
+            }, 2000);
+        }
+
+        // ==================== HELPERS ====================
+        function setMode(mode) {
+            state.mode = mode;
+            const el = document.getElementById('connectionMode');
+            const icon = document.getElementById('modeIcon');
+            const text = document.getElementById('modeText');
+            
+            el.className = 'connection-mode ' + mode;
+            
+            const modes = {
+                online: { i: '🌐', t: 'Online' },
+                offline: { i: '📴', t: 'Offline' },
+                mesh: { i: '🕸️', t: 'Mesh' }
+            };
+            
+            icon.textContent = modes[mode].i;
+            text.textContent = modes[mode].t;
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function toggleFabMenu() {
+            document.getElementById('fabMenu').classList.toggle('open');
+        }
+
+        function closeFabMenu() {
+            document.getElementById('fabMenu').classList.remove('open');
+        }
+
+        function updateHubStats() {
+            const local = state.opportunities.filter(o => o.source === 'local').length;
+            const mesh = state.opportunities.filter(o => o.source === 'mesh').length;
+            document.getElementById('oppCount').textContent = state.opportunities.length + ' available';
+            document.getElementById('oppMeshCount').textContent = mesh + ' from mesh';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = String(text);
+            return div.innerHTML;
+        }
+
+        function formatTime(ts) {
+            const sec = Math.floor((Date.now() - ts) / 1000);
+            if (sec < 60) return 'now';
+            if (sec < 3600) return Math.floor(sec/60) + 'm';
+            return Math.floor(sec/3600) + 'h';
+        }
+
+        function setupUI() {
+            const input = document.getElementById('chatInput');
+            if (input) {
+                input.addEventListener('input', () => {
+                    input.style.height = 'auto';
+                    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+                });
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendChatMessage();
+                    }
+                });
+            }
+        }
+
+        async function loadData() {
+            if (!state.dataStore) return;
+            
+            const tx = state.dataStore.transaction(['opportunities', 'messages'], 'readonly');
+            tx.objectStore('opportunities').getAll().onsuccess = (e) => {
+                state.opportunities = e.target.result;
+                renderOpportunities();
+                updateHubStats();
+            };
+            tx.objectStore('messages').getAll().onsuccess = (e) => {
+                state.messages = e.target.result;
+            };
+        }
+
+        function findMatches() {
+            showToast('Finding resonance matches...');
+            closeFabMenu();
+        }
+
+        function createCircle() { showToast('Circle formation initiated...'); }
+        function createQuest() { showToast('Quest creation opening...'); }
+        function switchRagTab(tab) { showToast('RAG: ' + tab); }
+        function approveEvolution() { document.getElementById('evolutionModal').classList.remove('show'); }
+        function postponeEvolution() { document.getElementById('evolutionModal').classList.remove('show'); }
+
+        // Start
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
