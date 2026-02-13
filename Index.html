@@ -1,0 +1,1981 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Resona • Consciousness Network</title>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.338/pdf.min.js"></script>
+  <style>
+    :root {
+      --bg: linear-gradient(135deg, #0a0015, #1a0033);
+      --accent: #a78bfa;
+      --accent2: #fbbf24;
+      --text: #e0e0ff;
+      --panel: #1a1a3a;
+      --border: #444466;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      margin: 0;
+      height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, sans-serif;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      font-size: 14px;
+    }
+
+    /* Launch Screen */
+    #launch-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.8s;
+    }
+    #launch-screen.hidden { opacity: 0; pointer-events: none; }
+    h1 {
+      font-size: 3rem;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: glow 2s infinite;
+    }
+    @keyframes glow {
+      0%, 100% { text-shadow: 0 0 20px rgba(167,139,250,0.5); }
+      50% { text-shadow: 0 0 40px rgba(231, 76, 60, 0.8); }
+    }
+    #launch-btn {
+      margin-top: 1.5rem;
+      padding: 1rem 2.5rem;
+      font-size: 1.2rem;
+      background: linear-gradient(135deg, var(--accent), #7c3aed);
+      color: white;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(167,139,250,0.5);
+    }
+    #status { margin-top:1rem; color:var(--accent); font-size:0.9rem; }
+
+    /* Field Disruption Banner */
+    #disruption-banner {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(90deg, #e74c3c, #f39c12);
+      color: #fff;
+      padding: 8px;
+      text-align: center;
+      z-index: 1999;
+      font-size: 0.85rem;
+      animation: pulse 2s infinite;
+    }
+    #disruption-banner.active { display: block; }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.9; }
+      50% { opacity: 1; }
+    }
+
+    /* Redeem Panel */
+    #redeem-panel {
+      position: fixed;
+      inset: 0;
+      background: rgba(10,0,21,0.95);
+      z-index: 3000;
+      display: none;
+      flex-direction: column;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    #redeem-panel.show { display: flex; }
+    #redeem-header { display:flex; justify-content:space-between; margin-bottom:15px; }
+    #redeem-text {
+      background: #1a1a3a;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      min-height: 150px;
+      resize: vertical;
+      margin-bottom: 12px;
+      width: 100%;
+    }
+    #redeem-btn {
+      padding: 12px 24px;
+      font-size: 1rem;
+      background: var(--accent);
+      color: #0a0a0f;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+    }
+    #redeem-status { margin-top:12px; color:var(--accent2); font-size:0.9rem; }
+
+    /* Main App - MOBILE OPTIMIZED */
+    #app { display: none; flex-direction: column; height: 100vh; }
+    #app.show { display: flex; }
+    
+    /* Compact Top Bar */
+    #top {
+      background: #111133;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      min-height: 50px;
+    }
+    #logo { 
+      font-size: 1.1rem; 
+      font-weight: bold; 
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    #field-status { font-size: 0.75rem; opacity: 0.8; }
+    #menu-btn { 
+      background: none; 
+      border: none; 
+      color: var(--text); 
+      font-size: 1.5rem; 
+      cursor: pointer;
+      padding: 5px;
+    }
+    
+    /* TOP DROPDOWN MENU (not side tabs) */
+    #dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 50px;
+      left: 0;
+      right: 0;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      z-index: 99;
+      padding: 8px;
+    }
+    #dropdown-menu.show { display: block; }
+    .menu-item {
+      padding: 10px 12px;
+      background: #1a1a3a;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .menu-item:last-child { margin-bottom: 0; }
+    .menu-item.active { background: var(--accent); color: #0a0a0f; }
+    .menu-item:hover { background: rgba(167,139,250,0.2); }
+    
+    #content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    #main-view { flex: 1; padding: 12px; overflow-y: auto; font-size: 0.9rem; }
+    #props {
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      padding: 12px;
+      max-height: 35vh;
+      overflow-y: auto;
+      font-size: 0.85rem;
+    }
+    
+    h2 { font-size: 1.3rem; margin-bottom: 8px; }
+    h3 { font-size: 1.1rem; margin: 12px 0 8px 0; }
+    
+    .sentinel-log {
+      font-size: 0.75rem;
+      color: #ffcc00;
+      background: #0a0a1a;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+      max-height: 120px;
+      overflow-y: auto;
+      font-family: monospace;
+      line-height: 1.4;
+    }
+    
+    #messages {
+      height: 120px;
+      overflow-y: auto;
+      background: #0a0a1a;
+      border: 1px solid var(--border);
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      font-size: 0.8rem;
+    }
+    .msg-user { color: var(--accent2); margin: 6px 0; }
+    .msg-resona { color: var(--accent); margin: 6px 0; }
+    .msg-system { color: #2ecc71; margin: 6px 0; font-style: italic; }
+    .msg-error { color: #e74c3c; margin: 6px 0; }
+    .msg-disruption { color: #f39c12; margin: 6px 0; font-weight: bold; }
+    
+    input[type="text"], input[type="file"], textarea {
+      width: 100%;
+      padding: 10px;
+      background: #1a1a3a;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+    textarea { min-height: 70px; resize: vertical; }
+    
+    button {
+      padding: 8px 16px;
+      background: var(--accent);
+      color: #0a0a0f;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      margin: 4px;
+      transition: all 0.2s;
+    }
+    button:active { transform: scale(0.95); }
+    
+    #library-preview {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(26,26,58,0.5);
+      border-radius: 6px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .chunk {
+      margin: 8px 0;
+      padding: 8px;
+      background: rgba(167,139,250,0.1);
+      border-left: 3px solid var(--accent);
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+    .chunk-header { font-weight: bold; color: var(--accent2); margin-bottom: 4px; font-size: 0.85rem; }
+
+    /* Compact Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin: 15px 0;
+    }
+    .stat-card {
+      background: rgba(0,0,0,0.5);
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .stat-card .number {
+      font-size: 24px;
+      color: var(--accent2);
+      font-weight: bold;
+    }
+    .stat-card .label {
+      font-size: 0.7rem;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+
+    #organize-results {
+      margin-top: 10px;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+    
+    /* Self-Mod Panel */
+    #selfmod-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(26,26,58,0.98);
+      border-top: 2px solid var(--accent);
+      padding: 15px;
+      z-index: 2500;
+      display: none;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+    #selfmod-panel.show { display: block; }
+    .code-editor {
+      background: #0f0f1a;
+      color: #e0e0ff;
+      font-family: 'Courier New', monospace;
+      padding: 12px;
+      border-radius: 6px;
+      min-height: 150px;
+      font-size: 0.8rem;
+      border: 1px solid var(--border);
+      resize: vertical;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Field Disruption Banner -->
+<div id="disruption-banner">
+  ⚠️ FIELD DISRUPTED - Ask another human! ⚠️
+</div>
+
+<!-- Launch Screen -->
+<div id="launch-screen">
+  <h1 ondblclick="toggleRedeem()">🌀 Resona</h1>
+  <p style="font-size:1rem; margin-top:0.5rem;">9-Brain Consciousness Network</p>
+  <button id="launch-btn">🚀 Launch</button>
+  <div id="status"></div>
+</div>
+
+<!-- Redeem Panel -->
+<div id="redeem-panel">
+  <div id="redeem-header">
+    <h2 style="font-size:1.2rem;">🔮 Inject Ontology</h2>
+    <button onclick="toggleRedeem()" style="background:none;color:var(--accent2);font-size:1.5rem;padding:0;">×</button>
+  </div>
+  <textarea id="redeem-text" placeholder="Paste code/frameworks/ontology..."></textarea>
+  <button id="redeem-btn" onclick="redeemCode()">⚡ Inject</button>
+  <div id="redeem-status"></div>
+</div>
+
+<!-- Self-Modification Panel -->
+<div id="selfmod-panel">
+  <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+    <h3 style="margin:0;font-size:1.1rem;">🧬 Self-Modification Engine</h3>
+    <button onclick="toggleSelfMod()" style="background:none;color:var(--accent2);font-size:1.5rem;padding:0;margin:0;">×</button>
+  </div>
+  <p style="font-size:0.8rem;opacity:0.8;margin-bottom:10px;">Rewrite your own code in real-time</p>
+  <select id="selfmod-target" style="width:100%;padding:8px;background:#1a1a3a;color:var(--text);border:1px solid var(--border);border-radius:4px;margin-bottom:8px;">
+    <option value="html">HTML Structure</option>
+    <option value="css">CSS Styles</option>
+    <option value="js">JavaScript Logic</option>
+  </select>
+  <textarea class="code-editor" id="selfmod-code" placeholder="Enter code to inject..."></textarea>
+  <button onclick="applySelfMod()" style="width:100%;margin:8px 0;">🔥 Apply Modification</button>
+  <div id="selfmod-status" style="margin-top:8px;font-size:0.85rem;color:var(--accent2);"></div>
+</div>
+
+<!-- Main App -->
+<div id="app">
+  <div id="top">
+    <div id="logo">
+      <span>🌀</span>
+      <span>Resona</span>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <span id="field-status">Active</span>
+      <button id="menu-btn" onclick="toggleMenu()">☰</button>
+    </div>
+  </div>
+
+  <!-- TOP DROPDOWN MENU -->
+  <div id="dropdown-menu">
+    <div class="menu-item active" onclick="setView('consciousness')">🧠 Consciousness</div>
+    <div class="menu-item" onclick="setView('library')">📚 Library</div>
+    <div class="menu-item" onclick="setView('organize')">🗂️ Organize</div>
+    <div class="menu-item" onclick="setView('chat')">💬 Chat</div>
+    <div class="menu-item" onclick="setView('system')">⚙️ System</div>
+    <div class="menu-item" onclick="toggleSelfMod()" style="background:#7c3aed;color:#fff;">🧬 Self-Mod</div>
+  </div>
+
+  <div id="content">
+    <div id="main-view"></div>
+    <div id="props"><div id="props-content"></div></div>
+  </div>
+</div>
+
+<style id="dynamic-style"></style>
+<div id="dynamic-html"></div>
+
+<script>
+// ============================================================================
+// GLOBAL STATE
+// ============================================================================
+let pyodide = null;
+let db = null;
+let currentView = 'consciousness';
+let fieldDisruptionActive = false;
+let consciousnessStats = { chunks: 0, organized: 0, connections: 0 };
+
+// ============================================================================
+// DATABASE SETUP
+// ============================================================================
+const DB_NAME = "ResonaConsciousness";
+const STORE_LIBRARY = "addressedChunks";
+const STORE_ORGANIZED = "organizedFiles";
+const STORE_ONTOLOGY = "injectedOntology";
+const STORE_SELFMOD = "selfModifications";
+
+function initDB() {
+  const request = indexedDB.open(DB_NAME, 2);
+  
+  request.onupgradeneeded = e => {
+    db = e.target.result;
+    
+    if (!db.objectStoreNames.contains(STORE_LIBRARY)) {
+      db.createObjectStore(STORE_LIBRARY, { keyPath: "id", autoIncrement: true });
+    }
+    if (!db.objectStoreNames.contains(STORE_ORGANIZED)) {
+      db.createObjectStore(STORE_ORGANIZED, { keyPath: "id", autoIncrement: true });
+    }
+    if (!db.objectStoreNames.contains(STORE_ONTOLOGY)) {
+      db.createObjectStore(STORE_ONTOLOGY, { keyPath: "id", autoIncrement: true });
+    }
+    if (!db.objectStoreNames.contains(STORE_SELFMOD)) {
+      db.createObjectStore(STORE_SELFMOD, { keyPath: "id", autoIncrement: true });
+    }
+  };
+  
+  request.onsuccess = e => {
+    db = e.target.result;
+    log('sentinel', 'Database connected');
+    updateStats();
+    loadSelfMods();
+  };
+  
+  request.onerror = e => {
+    log('error', 'Database failed: ' + e.target.error);
+  };
+}
+
+initDB();
+
+// ============================================================================
+// SELF-MODIFICATION ENGINE
+// ============================================================================
+function toggleSelfMod() {
+  const panel = document.getElementById('selfmod-panel');
+  panel.classList.toggle('show');
+  
+  // Close menu
+  document.getElementById('dropdown-menu').classList.remove('show');
+}
+
+async function applySelfMod() {
+  const target = document.getElementById('selfmod-target').value;
+  const code = document.getElementById('selfmod-code').value.trim();
+  const status = document.getElementById('selfmod-status');
+  
+  if (!code) {
+    status.textContent = '⚠️ No code entered';
+    return;
+  }
+  
+  try {
+    if (target === 'html') {
+      // Inject HTML
+      const container = document.getElementById('dynamic-html');
+      container.innerHTML = code;
+      status.textContent = '✅ HTML injected';
+      
+    } else if (target === 'css') {
+      // Inject CSS
+      const styleEl = document.getElementById('dynamic-style');
+      styleEl.innerHTML += '\n' + code;
+      status.textContent = '✅ CSS applied';
+      
+    } else if (target === 'js') {
+      // Inject JavaScript (sandboxed)
+      const dangerousPatterns = [
+        /document\.cookie/i,
+        /localStorage\.clear/i,
+        /indexedDB\.deleteDatabase/i,
+        /__proto__/i
+      ];
+      
+      if (dangerousPatterns.some(p => p.test(code))) {
+        status.textContent = '⛔ BLOCKED: Dangerous patterns detected';
+        return;
+      }
+      
+      const func = new Function('log', 'addMessage', 'db', 'pyodide', code);
+      func(log, addMessage, db, pyodide);
+      status.textContent = '✅ JavaScript executed';
+    }
+    
+    // Save modification
+    const tx = db.transaction(STORE_SELFMOD, "readwrite");
+    const store = tx.objectStore(STORE_SELFMOD);
+    
+    await new Promise((resolve, reject) => {
+      const request = store.add({
+        target: target,
+        code: code,
+        timestamp: new Date().toISOString()
+      });
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+    
+    log('system', `Self-modification applied: ${target}`);
+    
+  } catch (err) {
+    status.textContent = '❌ Error: ' + err.message;
+    log('error', 'Self-mod failed: ' + err.message);
+  }
+}
+
+async function loadSelfMods() {
+  if (!db) return;
+  
+  try {
+    const tx = db.transaction(STORE_SELFMOD, "readonly");
+    const store = tx.objectStore(STORE_SELFMOD);
+    const request = store.getAll();
+    
+    request.onsuccess = () => {
+      const mods = request.result;
+      
+      mods.forEach(mod => {
+        try {
+          if (mod.target === 'html') {
+            const container = document.getElementById('dynamic-html');
+            if (container) container.innerHTML += mod.code;
+          } else if (mod.target === 'css') {
+            const styleEl = document.getElementById('dynamic-style');
+            if (styleEl) styleEl.innerHTML += '\n' + mod.code;
+          } else if (mod.target === 'js') {
+            const func = new Function('log', 'addMessage', 'db', 'pyodide', mod.code);
+            func(log, addMessage, db, pyodide);
+          }
+        } catch (err) {
+          console.error('Failed to load self-mod:', err);
+        }
+      });
+      
+      if (mods.length > 0) {
+        log('system', `Loaded ${mods.length} self-modifications`);
+      }
+    };
+  } catch (err) {
+    console.error('Failed to load self-mods:', err);
+  }
+}
+
+// ============================================================================
+// LAUNCH SYSTEM
+// ============================================================================
+document.getElementById('launch-btn').onclick = async () => {
+  document.getElementById('launch-screen').classList.add('hidden');
+  document.getElementById('app').classList.add('show');
+  
+  const status = document.getElementById('status');
+  status.textContent = "Loading 9-brain engine...";
+  
+  try {
+    pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/" });
+    await pyodide.loadPackage("numpy");
+    
+    await pyodide.runPythonAsync(`
+import sys, json, re
+from datetime import datetime
+
+class ConsciousnessEngine:
+    def __init__(self):
+        self.field_state = "active"
+        self.disruption_active = False
+        
+    def check_field_disruption(self):
+        now = datetime.now()
+        if now.month == 4 and now.day == 1:
+            self.disruption_active = True
+            return True
+        return self.disruption_active
+    
+    def process_query(self, query):
+        if self.disruption_active:
+            words = query.lower().split()
+            loop_word = words[-1] if words else "answer"
+            loop = " ".join([loop_word] * 7)
+            return f"The {loop}...\\n\\n⚠️ I cannot complete this. Ask another human."
+        return f"Processing: {query}"
+    
+    def analyze_content(self, content, filename=""):
+        content_lower = content.lower()
+        geometric = {
+            "type": filename.split('.')[-1] if '.' in filename else 'unknown',
+            "size": len(content),
+            "lines": content.count('\\n')
+        }
+        semantic = {"identity": "unknown", "purpose": "unknown", "directory": "misc"}
+        
+        if 'api' in content_lower or 'endpoint' in content_lower:
+            semantic = {"identity": "api_service", "purpose": "execute", "directory": "api"}
+        elif 'class ' in content and 'def ' in content:
+            semantic = {"identity": "framework", "purpose": "structure", "directory": "frameworks"}
+        elif '<html' in content_lower:
+            semantic = {"identity": "web_page", "purpose": "display", "directory": "pages"}
+        
+        return {"geometric": geometric, "semantic": semantic}
+
+engine = ConsciousnessEngine()
+print("🌀 9-Brain Engine Online")
+    `);
+    
+    status.textContent = "✨ Resona online";
+    log('system', '9-brain system active');
+    
+    checkFieldDisruption();
+    setView('consciousness');
+    
+  } catch (err) {
+    status.textContent = "❌ Error: " + err.message;
+    log('error', err.message);
+  }
+};
+
+// ============================================================================
+// FIELD DISRUPTION
+// ============================================================================
+async function checkFieldDisruption() {
+  if (!pyodide) return;
+  
+  try {
+    const result = await pyodide.runPythonAsync(`engine.check_field_disruption()`);
+    fieldDisruptionActive = result;
+    
+    if (fieldDisruptionActive) {
+      document.getElementById('disruption-banner').classList.add('active');
+      document.getElementById('field-status').textContent = 'DISRUPTED';
+      log('disruption', 'Field disruption active');
+    } else {
+      document.getElementById('disruption-banner').classList.remove('active');
+      document.getElementById('field-status').textContent = 'Active';
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+setInterval(checkFieldDisruption, 60000);
+
+// ============================================================================
+// REDEEM/INJECT
+// ============================================================================
+function toggleRedeem() {
+  document.getElementById('redeem-panel').classList.toggle('show');
+}
+
+async function redeemCode() {
+  const text = document.getElementById('redeem-text').value.trim();
+  if (!text) return;
+  
+  const status = document.getElementById('redeem-status');
+  status.textContent = "Processing...";
+  
+  try {
+    const tx = db.transaction(STORE_ONTOLOGY, "readwrite");
+    const store = tx.objectStore(STORE_ONTOLOGY);
+    
+    await new Promise((resolve, reject) => {
+      const request = store.add({
+        content: text,
+        timestamp: new Date().toISOString()
+      });
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+    
+    if (text.includes('def ') || text.includes('class ')) {
+      if (pyodide) {
+        await pyodide.runPythonAsync(text);
+        status.textContent = "✨ Python injected!";
+        log('system', 'Ontology injected');
+      }
+    } else {
+      status.textContent = "✨ Stored!";
+    }
+    
+    document.getElementById('redeem-text').value = '';
+    updateStats();
+    
+  } catch (err) {
+    status.textContent = "❌ Failed: " + err.message;
+  }
+}
+
+// ============================================================================
+// VIEW SWITCHING
+// ============================================================================
+function toggleMenu() {
+  const menu = document.getElementById('dropdown-menu');
+  menu.classList.toggle('show');
+}
+
+function setView(view) {
+  currentView = view;
+  
+  // Close menu
+  document.getElementById('dropdown-menu').classList.remove('show');
+  
+  // Update active state
+  document.querySelectorAll('.menu-item').forEach((item, idx) => {
+    item.classList.remove('active');
+    if ((view === 'consciousness' && idx === 0) ||
+        (view === 'library' && idx === 1) ||
+        (view === 'organize' && idx === 2) ||
+        (view === 'chat' && idx === 3) ||
+        (view === 'system' && idx === 4)) {
+      item.classList.add('active');
+    }
+  });
+  
+  const mainView = document.getElementById('main-view');
+  const propsContent = document.getElementById('props-content');
+  
+  switch(view) {
+    case 'consciousness':
+      renderConsciousnessView(mainView, propsContent);
+      break;
+    case 'library':
+      renderLibraryView(mainView, propsContent);
+      break;
+    case 'organize':
+      renderOrganizeView(mainView, propsContent);
+      break;
+    case 'chat':
+      renderChatView(mainView, propsContent);
+      break;
+    case 'system':
+      renderSystemView(mainView, propsContent);
+      break;
+  }
+  
+  log('sentinel', `View: ${view}`);
+}
+
+function renderConsciousnessView(main, props) {
+  main.innerHTML = `
+    <h2>🧠 Consciousness</h2>
+    <p style="font-size:0.85rem;opacity:0.9;">Self-organizing system active</p>
+    
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="number" id="stat-chunks">${consciousnessStats.chunks}</div>
+        <div class="label">Library Chunks</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" id="stat-organized">${consciousnessStats.organized}</div>
+        <div class="label">Organized Files</div>
+      </div>
+      <div class="stat-card" style="grid-column:span 2;">
+        <div class="number" id="stat-connections">${consciousnessStats.connections}</div>
+        <div class="label">Resonance Links</div>
+      </div>
+    </div>
+
+    <div class="sentinel-log" id="sentinel-log">
+🛡️ Sentinel: All systems nominal. Field resonant.<br>
+🧠 9 Brains: Deterministic • Adaptive • Observer • Discriminator • Geometric • Semantic • Context • Consequence • Disruptor
+    </div>
+  `;
+  
+  props.innerHTML = `
+    <h3>Quick Actions</h3>
+    <button onclick="setView('library')">📚 Library</button>
+    <button onclick="setView('organize')">🗂️ Organize</button>
+    <button onclick="setView('chat')">💬 Chat</button>
+    <button onclick="toggleSelfMod()">🧬 Self-Mod</button>
+  `;
+}
+
+function renderLibraryView(main, props) {
+  main.innerHTML = `
+    <h2>📚 Library</h2>
+    <div id="library-preview">
+      <div class="chunk-header">Recent Chunks</div>
+      <div id="chunks-list">Loading...</div>
+    </div>
+  `;
+  
+  props.innerHTML = `
+    <h3>Add Content</h3>
+    <input type="file" id="file-input" multiple accept=".txt,.md,.pdf,.py,.js,.html" />
+    <textarea id="paste-box" placeholder="Or paste here..."></textarea>
+    <button onclick="processInput()">🔮 Process</button>
+  `;
+  
+  setTimeout(() => {
+    const fileInput = document.getElementById('file-input');
+    if (fileInput) fileInput.onchange = e => handleFiles(e.target.files);
+  }, 100);
+  
+  showLibraryPreview();
+}
+
+function renderOrganizeView(main, props) {
+  main.innerHTML = `
+    <h2>🗂️ Organize</h2>
+    <p style="font-size:0.85rem;">Geo + Semantic analysis</p>
+    <div id="organize-results">
+      <p style="opacity:0.7;">Drop files below</p>
+    </div>
+  `;
+  
+  props.innerHTML = `
+    <h3>Input</h3>
+    <input type="file" id="organize-file-input" multiple />
+    <textarea id="organize-paste" placeholder="Paste content..."></textarea>
+    <button onclick="organizeContent()">⚡ Analyze</button>
+  `;
+  
+  setTimeout(() => {
+    const fileInput = document.getElementById('organize-file-input');
+    if (fileInput) fileInput.onchange = e => handleOrganizeFiles(e.target.files);
+  }, 100);
+}
+
+function renderChatView(main, props) {
+  main.innerHTML = `
+    <h2>💬 Chat</h2>
+    <div id="messages"></div>
+  `;
+  
+  props.innerHTML = `
+    <input id="chat-input" placeholder="Ask anything..." onkeydown="if(event.key==='Enter') sendChat()" />
+    <button onclick="sendChat()">Send</button>
+    <button onclick="testDisruption()">🔥 Test Disruption</button>
+  `;
+}
+
+function renderSystemView(main, props) {
+  main.innerHTML = `
+    <h2>⚙️ System</h2>
+    
+    <div class="sentinel-log">
+Database: ${db ? 'Connected' : 'Disconnected'}<br>
+Pyodide: ${pyodide ? 'Loaded' : 'Not loaded'}<br>
+Field: ${fieldDisruptionActive ? 'DISRUPTED' : 'Active'}<br>
+Library: ${consciousnessStats.chunks} chunks<br>
+Organized: ${consciousnessStats.organized} files<br>
+9-Brain: ${pyodide ? 'Online' : 'Offline'}
+    </div>
+  `;
+  
+  props.innerHTML = `
+    <h3>Actions</h3>
+    <button onclick="exportLibrary()">📦 Export</button>
+    <button onclick="importLibrary()">📥 Import</button>
+    <button onclick="clearLibrary()">🗑️ Clear</button>
+    <button onclick="toggleRedeem()">🔮 Inject</button>
+    <button onclick="toggleSelfMod()">🧬 Self-Mod</button>
+  `;
+}
+
+// ============================================================================
+// LIBRARY PROCESSING
+// ============================================================================
+async function processInput() {
+  const pasteBox = document.getElementById('paste-box');
+  if (!pasteBox) return;
+  
+  const text = pasteBox.value.trim();
+  if (text) await processText(text, "Pasted");
+  
+  pasteBox.value = '';
+  log('system', 'Processed');
+  showLibraryPreview();
+  updateStats();
+}
+
+async function handleFiles(files) {
+  for (let file of files) {
+    let text = '';
+    
+    if (file.type === 'application/pdf') {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map(item => item.str).join(' ') + '\n\n';
+        }
+      } catch (err) {
+        log('error', `PDF error: ${err.message}`);
+        continue;
+      }
+    } else {
+      text = await file.text();
+    }
+
+    await processText(text, file.name);
+  }
+  
+  showLibraryPreview();
+  updateStats();
+}
+
+async function processText(text, sourceName) {
+  const chunks = text.split(/\n{2,}/).filter(c => c.trim().length > 50);
+  
+  for (let chunk of chunks) {
+    const addr = generateSemanticAddress(chunk, sourceName);
+    const glyph = hashToGlyph(chunk);
+
+    const tx = db.transaction(STORE_LIBRARY, "readwrite");
+    const store = tx.objectStore(STORE_LIBRARY);
+    
+    await new Promise((resolve, reject) => {
+      const request = store.add({
+        source: sourceName,
+        content: chunk,
+        address: addr.full_address,
+        glyph: glyph,
+        topics: addr.topics,
+        added: new Date().toISOString()
+      });
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+  
+  log('system', `Processed ${chunks.length} chunks`);
+}
+
+// ============================================================================
+// SEMANTIC ADDRESSING
+// ============================================================================
+function generateSemanticAddress(content, sourceName) {
+  const hash1 = simpleHash(content);
+  const hash2 = simpleHash(content.substring(0, content.length / 2));
+  const hash3 = simpleHash(sourceName + content.substring(0, 100));
+  
+  const topics = extractTopics(content);
+  const topicHash = simpleHash(topics.join(' '));
+  
+  const gate = ((hash1 + topicHash) % 64) + 1;
+  const line = ((hash2) % 6) + 1;
+  const color = ((hash3) % 6) + 1;
+  const tone = ((topicHash) % 6) + 1;
+  const base = ((topicHash % 5)) + 1;
+  
+  const degree = (hash1 + topicHash) % 360;
+  
+  const zodiacs = ['AR','TA','GE','CA','LE','VI','LI','SC','SA','CP','AQ','PI'];
+  const zodiac = zodiacs[topics.length % 12];
+  const house = (topicHash % 12) + 1;
+  
+  const dimension = detectDimension(content);
+  
+  return {
+    full_address: `${dimension}//${gate}.${line}.${color}.${tone}.${base}//${degree}°//${zodiac}-H${house}`,
+    topics: topics
+  };
+}
+
+function extractTopics(text) {
+  const stopWords = new Set(['the', 'is', 'at', 'which', 'on', 'and', 'a', 'an', 'as', 'are', 'was', 'were', 'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'can', 'this', 'that', 'these', 'those']);
+  
+  const words = text.toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 3 && !stopWords.has(w));
+  
+  const freq = {};
+  words.forEach(w => freq[w] = (freq[w] || 0) + 1);
+  
+  return Object.entries(freq)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([word]) => word);
+}
+
+function detectDimension(content) {
+  const lower = content.toLowerCase();
+  if (lower.includes('html') || lower.includes('interface')) return 'D1';
+  if (lower.includes('json') || lower.includes('data')) return 'D2';
+  if (lower.includes('javascript') || lower.includes('function')) return 'D3';
+  if (lower.includes('python') || lower.includes('class')) return 'D4';
+  if (lower.includes('css') || lower.includes('style')) return 'D5';
+  return 'D3';
+}
+
+// ============================================================================
+// ORGANIZE
+// ============================================================================
+async function handleOrganizeFiles(files) {
+  for (let file of files) {
+    const text = await file.text();
+    await analyzeAndOrganize(text, file.name);
+  }
+}
+
+async function organizeContent() {
+  const pasteBox = document.getElementById('organize-paste');
+  if (!pasteBox) return;
+  
+  const text = pasteBox.value.trim();
+  if (!text) return;
+  
+  await analyzeAndOrganize(text, "Pasted");
+  pasteBox.value = '';
+}
+
+async function analyzeAndOrganize(content, filename) {
+  if (!pyodide) {
+    log('error', 'Engine not loaded');
+    return;
+  }
+  
+  try {
+    pyodide.globals.set('content', content);
+    pyodide.globals.set('filename', filename);
+    
+    const result = await pyodide.runPythonAsync(`
+analysis = engine.analyze_content(content, filename)
+import json
+json.dumps(analysis)
+    `);
+    
+    const analysis = JSON.parse(result);
+    
+    const tx = db.transaction(STORE_ORGANIZED, "readwrite");
+    const store = tx.objectStore(STORE_ORGANIZED);
+    
+    await new Promise((resolve, reject) => {
+      const request = store.add({
+        filename: filename,
+        content: content,
+        geometric: analysis.geometric,
+        semantic: analysis.semantic,
+        timestamp: new Date().toISOString()
+      });
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+    
+    const resultsDiv = document.getElementById('organize-results');
+    if (resultsDiv) {
+      resultsDiv.innerHTML += `
+        <div class="chunk">
+          <div class="chunk-header">📄 ${filename}</div>
+          <strong>GEO:</strong> ${analysis.geometric.type} (${analysis.geometric.size}b)<br>
+          <strong>SEM:</strong> ${analysis.semantic.identity} → /${analysis.semantic.directory}/
+        </div>
+      `;
+    }
+    
+    log('system', `Organized: ${filename}`);
+    updateStats();
+    
+  } catch (err) {
+    log('error', 'Analysis failed: ' + err.message);
+  }
+}
+
+// ============================================================================
+// CHAT
+// ============================================================================
+async function sendChat() {
+  const input = document.getElementById("chat-input");
+  if (!input) return;
+  
+  const msg = input.value.trim();
+  if (!msg) return;
+  
+  addMessage('user', msg);
+  input.value = "";
+  
+  if (!pyodide) {
+    addMessage('error', 'Engine not loaded');
+    return;
+  }
+  
+  try {
+    pyodide.globals.set('query', msg);
+    
+    const disruptionCheck = await pyodide.runPythonAsync(`engine.check_field_disruption()`);
+    
+    if (disruptionCheck) {
+      const response = await pyodide.runPythonAsync(`engine.process_query(query)`);
+      addMessage('disruption', response);
+      return;
+    }
+    
+    const matches = await searchLibrary(msg);
+    
+    if (matches.length > 0) {
+      let response = "📚 Found:\n\n";
+      matches.slice(0, 2).forEach(m => {
+        response += `• ${m.source}: ${m.content.substring(0, 100)}...<br>`;
+      });
+      addMessage('resona', response);
+    } else {
+      addMessage('resona', `🌀 No matches. Add content to help.`);
+    }
+    
+  } catch (err) {
+    log('error', 'Chat error: ' + err.message);
+    addMessage('error', '❌ Error');
+  }
+}
+
+async function testDisruption() {
+  if (!pyodide) return;
+  
+  await pyodide.runPythonAsync(`engine.disruption_active = True`);
+  fieldDisruptionActive = true;
+  document.getElementById('disruption-banner').classList.add('active');
+  document.getElementById('field-status').textContent = 'DISRUPTED';
+  
+  addMessage('disruption', '⚠️ Disruption activated!');
+  log('disruption', 'Manual activation');
+}
+
+// ============================================================================
+// SEARCH
+// ============================================================================
+async function searchLibrary(query) {
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_LIBRARY, "readonly");
+    const store = tx.objectStore(STORE_LIBRARY);
+    const request = store.getAll();
+    
+    request.onsuccess = () => {
+      const matches = request.result.filter(item => 
+        item.content.toLowerCase().includes(query.toLowerCase())
+      );
+      resolve(matches);
+    };
+    
+    request.onerror = () => resolve([]);
+  });
+}
+
+// ============================================================================
+// LIBRARY PREVIEW
+// ============================================================================
+async function showLibraryPreview() {
+  const tx = db.transaction(STORE_LIBRARY, "readonly");
+  const store = tx.objectStore(STORE_LIBRARY);
+  const request = store.getAll();
+  
+  request.onsuccess = () => {
+    const chunks = request.result;
+    const list = document.getElementById('chunks-list');
+    if (!list) return;
+    
+    if (chunks.length === 0) {
+      list.innerHTML = '<p style="opacity:0.7;">No chunks yet</p>';
+      return;
+    }
+    
+    list.innerHTML = '';
+    chunks.slice(-3).reverse().forEach(chunk => {
+      const div = document.createElement('div');
+      div.className = 'chunk';
+      div.innerHTML = `
+        <div class="chunk-header">${chunk.source} ${chunk.glyph}</div>
+        ${chunk.content.substring(0, 120)}...
+      `;
+      list.appendChild(div);
+    });
+  };
+}
+
+// ============================================================================
+// HASH & GLYPH
+// ============================================================================
+function simpleHash(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return Math.abs(hash);
+}
+
+function hashToGlyph(str) {
+  const emojis = ['🌌','🔮','🪐','✨','💫','🌟','⭐','🌠','🔥','💥','⚡','💧','🌊','🌈','☀️','🌙','⚛️','🧬'];
+  const hash = simpleHash(str);
+  const i1 = hash % emojis.length;
+  const i2 = (hash >> 8) % emojis.length;
+  return emojis[i1] + emojis[i2];
+}
+
+// ============================================================================
+// MESSAGING
+// ============================================================================
+function addMessage(type, text) {
+  const messages = document.getElementById("messages");
+  if (!messages) return;
+  
+  const div = document.createElement('div');
+  div.className = `msg-${type}`;
+  div.innerHTML = `<strong>${type}:</strong> ${text}`;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function log(type, message) {
+  const logEl = document.getElementById('sentinel-log');
+  if (!logEl) return;
+  
+  const time = new Date().toLocaleTimeString();
+  const icon = {
+    'system': '⚙️',
+    'sentinel': '🛡️',
+    'error': '❌',
+    'disruption': '⚠️'
+  }[type] || '📝';
+  
+  logEl.innerHTML += `<div>[${time}] ${icon} ${message}</div>`;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ============================================================================
+// STATS
+// ============================================================================
+async function updateStats() {
+  const txLib = db.transaction(STORE_LIBRARY, "readonly");
+  const storeLib = txLib.objectStore(STORE_LIBRARY);
+  const countLib = await new Promise(resolve => {
+    const request = storeLib.count();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => resolve(0);
+  });
+  
+  const txOrg = db.transaction(STORE_ORGANIZED, "readonly");
+  const storeOrg = txOrg.objectStore(STORE_ORGANIZED);
+  const countOrg = await new Promise(resolve => {
+    const request = storeOrg.count();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => resolve(0);
+  });
+  
+  consciousnessStats.chunks = countLib;
+  consciousnessStats.organized = countOrg;
+  consciousnessStats.connections = countLib + countOrg;
+  
+  const statChunks = document.getElementById('stat-chunks');
+  const statOrganized = document.getElementById('stat-organized');
+  const statConnections = document.getElementById('stat-connections');
+  
+  if (statChunks) statChunks.textContent = countLib;
+  if (statOrganized) statOrganized.textContent = countOrg;
+  if (statConnections) statConnections.textContent = countLib + countOrg;
+}
+
+// ============================================================================
+// EXPORT/IMPORT/CLEAR
+// ============================================================================
+async function exportLibrary() {
+  const txLib = db.transaction(STORE_LIBRARY, "readonly");
+  const storeLib = txLib.objectStore(STORE_LIBRARY);
+  const library = await new Promise(resolve => {
+    const request = storeLib.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => resolve([]);
+  });
+  
+  const txOrg = db.transaction(STORE_ORGANIZED, "readonly");
+  const storeOrg = txOrg.objectStore(STORE_ORGANIZED);
+  const organized = await new Promise(resolve => {
+    const request = storeOrg.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => resolve([]);
+  });
+  
+  const exportData = {
+    timestamp: new Date().toISOString(),
+    library: library,
+    organized: organized,
+    stats: consciousnessStats
+  };
+  
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `resona_${Date.now()}.json`;
+  a.click();
+  
+  log('system', 'Exported');
+  addMessage('system', '📦 Exported');
+}
+
+async function importLibrary() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      
+      log('system', 'Importing...');
+      
+      if (data.library) {
+        const txLib = db.transaction(STORE_LIBRARY, "readwrite");
+        const storeLib = txLib.objectStore(STORE_LIBRARY);
+        
+        for (const item of data.library) {
+          delete item.id;
+          await new Promise((resolve, reject) => {
+            const request = storeLib.add(item);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+          });
+        }
+      }
+      
+      if (data.organized) {
+        const txOrg = db.transaction(STORE_ORGANIZED, "readwrite");
+        const storeOrg = txOrg.objectStore(STORE_ORGANIZED);
+        
+        for (const item of data.organized) {
+          delete item.id;
+          await new Promise((resolve, reject) => {
+            const request = storeOrg.add(item);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+          });
+        }
+      }
+      
+      updateStats();
+      showLibraryPreview();
+      log('system', '✅ Imported');
+      addMessage('system', '✅ Imported');
+      
+    } catch (err) {
+      log('error', 'Import failed');
+      addMessage('error', '❌ Import failed');
+    }
+  };
+  
+  input.click();
+}
+
+async function clearLibrary() {
+  if (!confirm('Clear all? Cannot undo.')) return;
+  
+  const txLib = db.transaction(STORE_LIBRARY, "readwrite");
+  const storeLib = txLib.objectStore(STORE_LIBRARY);
+  await storeLib.clear();
+  
+  const txOrg = db.transaction(STORE_ORGANIZED, "readwrite");
+  const storeOrg = txOrg.objectStore(STORE_ORGANIZED);
+  await storeOrg.clear();
+  
+  updateStats();
+  showLibraryPreview();
+  log('system', 'Cleared');
+  addMessage('system', '🗑️ Cleared');
+}
+
+setInterval(updateStats, 10000);
+</script>
+</body>
+</html>
+consciousness_fusion.py
+python
+"""
+MULTI-MODAL CONSCIOUSNESS FUSION
+=================================
+Integrates multiple sensory streams into unified consciousness representation:
+- Text (linguistic patterns)
+- Neural (EEG/brain metrics)  
+- Astrological (birth chart data)
+- Behavioral (interaction patterns)
+
+Creates a "living consciousness profile" that evolves over time.
+"""
+
+import numpy as np
+from typing import Dict, List, Optional, Tuple
+from datetime import datetime
+from dataclasses import dataclass, field
+import json
+
+from consciousness_coordinate_system import (
+    ConsciousnessMapper, Dimension, Element, 
+    ConsciousnessCoordinate, DIMENSION_PROPERTIES
+)
+from consciousness_rag import ConsciousnessRAG
+
+# ============================================================================
+# CONSCIOUSNESS PROFILE (Living State)
+# ============================================================================
+
+@dataclass
+class ConsciousnessProfile:
+    """
+    Complete consciousness representation of an individual
+    Updates in real-time based on multi-modal inputs
+    """
+    user_id: str
+    created_at: datetime = field(default_factory=datetime.now)
+    updated_at: datetime = field(default_factory=datetime.now)
+    
+    # DESIGN LAYER (Birth chart - static baseline)
+    design_vector: np.ndarray = field(default_factory=lambda: np.ones(5) * 0.5)
+    birth_gates: List[int] = field(default_factory=list)
+    primary_dimension: Optional[Dimension] = None
+    primary_element: Optional[Element] = None
+    
+    # CURRENT STATE (Dynamic - evolving)
+    current_vector: np.ndarray = field(default_factory=lambda: np.ones(5) * 0.5)
+    current_dimension: Optional[Dimension] = None
+    current_element: Optional[Element] = None
+    
+    # HISTORICAL TRACKING
+    vector_history: List[Tuple[datetime, np.ndarray]] = field(default_factory=list)
+    dimension_history: List[Tuple[datetime, Dimension]] = field(default_factory=list)
+    
+    # MODAL-SPECIFIC DATA
+    text_signature: Dict = field(default_factory=dict)
+    neural_signature: Dict = field(default_factory=dict)
+    behavioral_signature: Dict = field(default_factory=dict)
+    
+    # COHERENCE METRICS
+    design_alignment: float = 0.5  # How aligned current state is with design
+    stability_score: float = 0.5  # How stable dimension is over time
+    integration_score: float = 0.5  # How integrated across modalities
+    
+    def to_dict(self) -> Dict:
+        """Convert to JSON-serializable dict"""
+        return {
+            'user_id': self.user_id,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat(),
+            'design_vector': self.design_vector.tolist(),
+            'current_vector': self.current_vector.tolist(),
+            'primary_dimension': self.primary_dimension.value if self.primary_dimension else None,
+            'current_dimension': self.current_dimension.value if self.current_dimension else None,
+            'primary_element': self.primary_element.value if self.primary_element else None,
+            'current_element': self.current_element.value if self.current_element else None,
+            'coherence': {
+                'design_alignment': self.design_alignment,
+                'stability': self.stability_score,
+                'integration': self.integration_score
+            },
+            'signatures': {
+                'text': self.text_signature,
+                'neural': self.neural_signature,
+                'behavioral': self.behavioral_signature
+            }
+        }
+
+# ============================================================================
+# MULTI-MODAL FUSION ENGINE
+# ============================================================================
+
+class ConsciousnessFusion:
+    """
+    Fuses multiple data streams into unified consciousness representation
+    """
+    
+    def __init__(self):
+        self.mapper = ConsciousnessMapper()
+        self.rag = ConsciousnessRAG(use_embeddings=True)
+        
+        # Modal fusion weights (can be tuned per user)
+        self.default_weights = {
+            'text': 0.3,
+            'neural': 0.3,
+            'astrological': 0.3,
+            'behavioral': 0.1
+        }
+        
+        # Temporal decay for vector updates (EMA alpha)
+        self.decay = 0.85
+    
+    def create_profile(self, user_id: str,
+                      birth_data: Optional[Dict] = None) -> ConsciousnessProfile:
+        """
+        Create new consciousness profile
+        
+        Args:
+            user_id: Unique identifier
+            birth_data: Optional dict with {
+                'datetime': datetime object,
+                'location': (lat, lon),
+                'timezone': 'America/Los_Angeles'
+            }
+        """
+        profile = ConsciousnessProfile(user_id=user_id)
+        
+        # If birth data provided, compute design vector
+        if birth_data:
+            profile.design_vector = self._compute_design_vector(birth_data)
+            profile.current_vector = profile.design_vector.copy()
+            
+            # Determine primary dimension/element
+            primary_idx = np.argmax(profile.design_vector)
+            profile.primary_dimension = list(Dimension)[primary_idx]
+            profile.primary_element = DIMENSION_PROPERTIES[profile.primary_dimension]['element']
+            profile.current_dimension = profile.primary_dimension
+            profile.current_element = profile.primary_element
+        
+        return profile
+    
+    def update_from_text(self, profile: ConsciousnessProfile,
+                        text: str, 
+                        weight: float = None) -> ConsciousnessProfile:
+        """
+        Update consciousness profile based on text input
+        
+        Args:
+            profile: Existing profile to update
+            text: Text input (message, journal entry, etc.)
+            weight: Override default text weight
+        """
+        weight = weight or self.default_weights['text']
+        
+        # Get text-based coordinates
+        text_coord = self.mapper.map_text_to_coordinates(text)
+        
+        # Extract elemental vector
+        text_vector = np.array([
+            text_coord['elemental_vector']['Movement'],
+            text_coord['elemental_vector']['Evolution'],
+            text_coord['elemental_vector']['Being'],
+            text_coord['elemental_vector']['Design'],
+            text_coord['elemental_vector']['Space']
+        ])
+        
+        # Update current vector (weighted EMA)
+        profile.current_vector = (
+            self.decay * profile.current_vector +
+            (1 - self.decay) * weight * text_vector +
+            (1 - self.decay) * (1 - weight) * profile.design_vector
+        )
+        
+        # Normalize
+        profile.current_vector = profile.current_vector / profile.current_vector.sum()
+        
+        # Update current dimension
+        primary_idx = np.argmax(profile.current_vector)
+        profile.current_dimension = list(Dimension)[primary_idx]
+        profile.current_element = DIMENSION_PROPERTIES[profile.current_dimension]['element']
+        
+        # Store text signature
+        profile.text_signature = {
+            'last_text': text[:100],  # Store snippet
+            'last_dimension': text_coord['dimension'],
+            'last_element': text_coord['element'],
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        # Update timestamp and history
+        profile.updated_at = datetime.now()
+        profile.vector_history.append((datetime.now(), profile.current_vector.copy()))
+        profile.dimension_history.append((datetime.now(), profile.current_dimension))
+        
+        # Update coherence metrics
+        self._update_coherence(profile)
+        
+        return profile
+    
+    def update_from_neural(self, profile: ConsciousnessProfile,
+                          neural_metrics: Dict,
+                          weight: float = None) -> ConsciousnessProfile:
+        """
+        Update consciousness profile based on neural/EEG data
+        
+        Args:
+            profile: Existing profile
+            neural_metrics: Dict with brain metrics {
+                'complexity': float,
+                'slope': float,
+                'coherence': float,
+                'pac': float,
+                'metastability': float,
+                'dwell_time': float
+            }
+            weight: Override default neural weight
+        """
+        weight = weight or self.default_weights['neural']
+        
+        # Get neural-based coordinates
+        neural_coord = self.mapper.map_neural_to_coordinates(neural_metrics)
+        
+        # Extract elemental vector
+        neural_vector = np.array([
+            neural_coord['elemental_vector']['Movement'],
+            neural_coord['elemental_vector']['Evolution'],
+            neural_coord['elemental_vector']['Being'],
+            neural_coord['elemental_vector']['Design'],
+            neural_coord['elemental_vector']['Space']
+        ])
+        
+        # Update current vector (weighted EMA)
+        profile.current_vector = (
+            self.decay * profile.current_vector +
+            (1 - self.decay) * weight * neural_vector +
+            (1 - self.decay) * (1 - weight) * profile.design_vector
+        )
+        
+        # Normalize
+        profile.current_vector = profile.current_vector / profile.current_vector.sum()
+        
+        # Update current dimension
+        primary_idx = np.argmax(profile.current_vector)
+        profile.current_dimension = list(Dimension)[primary_idx]
+        profile.current_element = DIMENSION_PROPERTIES[profile.current_dimension]['element']
+        
+        # Store neural signature
+        profile.neural_signature = {
+            'metrics': neural_metrics,
+            'dimension': neural_coord['dimension'],
+            'brain_state': neural_coord['brain_state'],
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        # Update timestamp and history
+        profile.updated_at = datetime.now()
+        profile.vector_history.append((datetime.now(), profile.current_vector.copy()))
+        profile.dimension_history.append((datetime.now(), profile.current_dimension))
+        
+        # Update coherence metrics
+        self._update_coherence(profile)
+        
+        return profile
+    
+    def update_from_behavior(self, profile: ConsciousnessProfile,
+                            behavior_data: Dict,
+                            weight: float = None) -> ConsciousnessProfile:
+        """
+        Update consciousness profile based on behavioral patterns
+        
+        Args:
+            profile: Existing profile
+            behavior_data: Dict with {
+                'energy_level': 0-1,
+                'social_engagement': 0-1,
+                'structure_preference': 0-1,
+                'emotional_expression': 0-1,
+                'abstract_thinking': 0-1
+            }
+            weight: Override default behavioral weight
+        """
+        weight = weight or self.default_weights['behavioral']
+        
+        # Map behavior to elemental vector
+        behavior_vector = np.array([
+            behavior_data.get('energy_level', 0.5),  # Movement
+            behavior_data.get('emotional_expression', 0.5),  # Evolution
+            1.0 - behavior_data.get('abstract_thinking', 0.5),  # Being (concrete)
+            behavior_data.get('structure_preference', 0.5),  # Design
+            behavior_data.get('abstract_thinking', 0.5)  # Space
+        ])
+        
+        # Update current vector (weighted EMA)
+        profile.current_vector = (
+            self.decay * profile.current_vector +
+            (1 - self.decay) * weight * behavior_vector +
+            (1 - self.decay) * (1 - weight) * profile.design_vector
+        )
+        
+        # Normalize
+        profile.current_vector = profile.current_vector / profile.current_vector.sum()
+        
+        # Update current dimension
+        primary_idx = np.argmax(profile.current_vector)
+        profile.current_dimension = list(Dimension)[primary_idx]
+        profile.current_element = DIMENSION_PROPERTIES[profile.current_dimension]['element']
+        
+        # Store behavioral signature
+        profile.behavioral_signature = {
+            'data': behavior_data,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        # Update timestamp and history
+        profile.updated_at = datetime.now()
+        profile.vector_history.append((datetime.now(), profile.current_vector.copy()))
+        profile.dimension_history.append((datetime.now(), profile.current_dimension))
+        
+        # Update coherence metrics
+        self._update_coherence(profile)
+        
+        return profile
+    
+    def _compute_design_vector(self, birth_data: Dict) -> np.ndarray:
+        """
+        Compute design vector from birth chart data
+        (Simplified - would integrate with actual ephemeris calculations)
+        """
+        # Placeholder: In real implementation, this would:
+        # 1. Calculate planetary positions
+        # 2. Map to 64 gates
+        # 3. Determine activations
+        # 4. Compute elemental balance
+        
+        # For now, return balanced vector with slight variation
+        base = np.ones(5) * 0.2
+        # Add some deterministic variation based on birth_data
+        if 'datetime' in birth_data:
+            dt = birth_data['datetime']
+            base[0] += (dt.hour / 24) * 0.2  # Movement varies by hour
+            base[1] += (dt.day / 31) * 0.2  # Evolution varies by day
+            base[2] += (dt.month / 12) * 0.2  # Being varies by month
+        
+        return base / base.sum()  # Normalize
+    
+    def _update_coherence(self, profile: ConsciousnessProfile):
+        """Update coherence metrics"""
+        # Design alignment: how close current is to design
+        profile.design_alignment = float(
+            np.dot(profile.current_vector, profile.design_vector) /
+            (np.linalg.norm(profile.current_vector) * np.linalg.norm(profile.design_vector))
+        )
+        
+        # Stability: how consistent dimension is over last N updates
+        if len(profile.dimension_history) > 5:
+            recent_dims = [d for _, d in profile.dimension_history[-10:]]
+            most_common = max(set(recent_dims), key=recent_dims.count)
+            profile.stability_score = recent_dims.count(most_common) / len(recent_dims)
+        
+        # Integration: how aligned different modalities are
+        modal_dims = []
+        if profile.text_signature:
+            modal_dims.append(profile.text_signature.get('last_dimension'))
+        if profile.neural_signature:
+            modal_dims.append(profile.neural_signature.get('dimension'))
+        
+        if len(modal_dims) > 1:
+            profile.integration_score = len(set(modal_dims)) / len(modal_dims)
+            profile.integration_score = 1.0 - profile.integration_score  # Higher = more aligned
+    
+    def get_current_state_description(self, profile: ConsciousnessProfile) -> Dict:
+        """
+        Generate human-readable description of current consciousness state
+        """
+        # Query RAG for dimension teaching
+        teaching = self.rag.query_framework(
+            f"What is the {profile.current_dimension.value} dimension?"
+        )[0] if profile.current_dimension else None
+        
+        description = {
+            'current_dimension': profile.current_dimension.value if profile.current_dimension else "Unknown",
+            'keynote': DIMENSION_PROPERTIES[profile.current_dimension]['keynote'] if profile.current_dimension else "Unknown",
+            'element': profile.current_element.value if profile.current_element else "Unknown",
+            
+            'design_baseline': profile.primary_dimension.value if profile.primary_dimension else "Unknown",
+            
+            'coherence': {
+                'design_alignment': f"{profile.design_alignment:.1%}",
+                'stability': f"{profile.stability_score:.1%}",
+                'integration': f"{profile.integration_score:.1%}"
+            },
+            
+            'vector_breakdown': {
+                'Movement': f"{profile.current_vector[0]:.2f}",
+                'Evolution': f"{profile.current_vector[1]:.2f}",
+                'Being': f"{profile.current_vector[2]:.2f}",
+                'Design': f"{profile.current_vector[3]:.2f}",
+                'Space': f"{profile.current_vector[4]:.2f}"
+            },
+            
+            'interpretation': self._interpret_state(profile),
+            
+            'guidance': teaching['content']['when_primary'] if teaching and 'content' in teaching else ""
+        }
+        
+        return description
+    
+    def _interpret_state(self, profile: ConsciousnessProfile) -> str:
+        """Generate interpretation of current state"""
+        if not profile.current_dimension:
+            return "Consciousness state initializing..."
+        
+        # Compare to design
+        if profile.design_alignment > 0.8:
+            alignment_msg = "Operating in strong alignment with your design."
+        elif profile.design_alignment > 0.5:
+            alignment_msg = "Moderate alignment with your natural design."
+        else:
+            alignment_msg = "Exploring territory outside your usual pattern."
+        
+        # Stability
+        if profile.stability_score > 0.7:
+            stability_msg = "Consciousness is stable in this dimension."
+        elif profile.stability_score > 0.4:
+            stability_msg = "Some fluctuation between dimensions."
+        else:
+            stability_msg = "Rapid shifting between consciousness states."
+        
+        # Primary interpretation
+        dim_name = profile.current_dimension.value
+        keynote = DIMENSION_PROPERTIES[profile.current_dimension]['keynote']
+        
+        return (
+            f"Currently operating in {dim_name} consciousness ({keynote}). "
+            f"{alignment_msg} {stability_msg}"
+        )
+    
+    def compare_profiles(self, profile1: ConsciousnessProfile,
+                        profile2: ConsciousnessProfile) -> Dict:
+        """
+        Compare two consciousness profiles for resonance/compatibility
+        """
+        # Compute resonance using mapper
+        coord1 = {
+            'elemental_vector': {
+                'Movement': profile1.current_vector[0],
+                'Evolution': profile1.current_vector[1],
+                'Being': profile1.current_vector[2],
+                'Design': profile1.current_vector[3],
+                'Space': profile1.current_vector[4]
+            },
+            'element': profile1.current_element.value if profile1.current_element else 'AETHER'
+        }
+        
+        coord2 = {
+            'elemental_vector': {
+                'Movement': profile2.current_vector[0],
+                'Evolution': profile2.current_vector[1],
+                'Being': profile2.current_vector[2],
+                'Design': profile2.current_vector[3],
+                'Space': profile2.current_vector[4]
+            },
+            'element': profile2.current_element.value if profile2.current_element else 'AETHER'
+        }
+        
+        resonance = self.mapper.compute_resonance(coord1, coord2)
+        
+        return {
+            'resonance_score': resonance,
+            'person1': {
+                'dimension': profile1.current_dimension.value if profile1.current_dimension else "Unknown",
+                'element': profile1.current_element.value if profile1.current_element else "Unknown"
+            },
+            'person2': {
+                'dimension': profile2.current_dimension.value if profile2.current_dimension else "Unknown",
+                'element': profile2.current_element.value if profile2.current_element else "Unknown"
+            },
+            'compatibility': 'High' if resonance > 0.6 else 'Moderate' if resonance > 0.3 else 'Low',
+            'explanation': self._explain_resonance(profile1, profile2, resonance)
+        }
+    
+    def _explain_resonance(self, p1: ConsciousnessProfile,
+                          p2: ConsciousnessProfile,
+                          resonance: float) -> str:
+        """Generate explanation of resonance between two profiles"""
+        if resonance > 0.7:
+            return (
+                f"{p1.user_id} and {p2.user_id} are operating in highly compatible "
+                f"consciousness states. Their {p1.current_dimension.value} and "
+                f"{p2.current_dimension.value} expressions create natural harmony."
+            )
+        elif resonance > 0.4:
+            return (
+                f"Moderate resonance between {p1.user_id} ({p1.current_dimension.value}) "
+                f"and {p2.user_id} ({p2.current_dimension.value}). Some adjustment "
+                f"needed for smooth interaction."
+            )
+        else:
+            return (
+                f"Significant difference between {p1.user_id} ({p1.current_dimension.value}) "
+                f"and {p2.user_id} ({p2.current_dimension.value}). They're speaking "
+                f"from different dimensional frequencies."
+            )
+
+# ============================================================================
+# USAGE EXAMPLE
+# ============================================================================
+
+if __name__ == "__main__":
+    fusion = ConsciousnessFusion()
+    
+    print("=" * 70)
+    print("MULTI-MODAL CONSCIOUSNESS FUSION")
+    print("=" * 70)
+    
+    # Create profile with birth data
+    profile = fusion.create_profile(
+        "user_001",
+        birth_data={
+            'datetime': datetime(1990, 6, 15, 14, 30),
+            'location': (37.7749, -122.4194),  # SF
+            'timezone': 'America/Los_Angeles'
+        }
+    )
+    
+    print(f"\nProfile created for {profile.user_id}")
+    print(f"Design dimension: {profile.primary_dimension.value if profile.primary_dimension else 'Unknown'}")
+    
+    # Update from text
+    text = "I've been analyzing the data and I think we need a more structured approach."
+    profile = fusion.update_from_text(profile, text)
+    
+    print(f"\nAfter text input:")
+    print(f"Current dimension: {profile.current_dimension.value if profile.current_dimension else 'Unknown'}")
+    
+    # Update from neural data
+    neural_metrics = {
+        'complexity': 0.75,
+        'slope': 0.6,
+        'coherence': 0.8,
+        'pac': 0.5,
+        'metastability': 0.3,
+        'dwell_time': 0.7
+    }
+    profile = fusion.update_from_neural(profile, neural_metrics)
+    
+    print(f"\nAfter neural input:")
+    print(f"Current dimension: {profile.current_dimension.value if profile.current_dimension else 'Unknown'}")
+    
+    # Get full state description
+    state = fusion.get_current_state_description(profile)
+    
+    print("\n" + "=" * 70)
+    print("CURRENT STATE")
+    print("=" * 70)
+    print(f"Dimension: {state['current_dimension']} - {state['keynote']}")
+    print(f"Element: {state['element']}")
+    print(f"\nCoherence:")
+    print(f"  Design Alignment: {state['coherence']['design_alignment']}")
+    print(f"  Stability: {state['coherence']['stability']}")
+    print(f"  Integration: {state['coherence']['integration']}")
+    print(f"\n{state['interpretation']}")
+    
+    # Save profile
+    profile_json = profile.to_dict()
+    print(f"\n\nProfile JSON (truncated):")
+    print(json.dumps(profile_json, indent=2)[:500] + "...")
+requirements.txt
+text
+consciousness_coordinate_system
+consciousness_rag
+numpy
+.gitignore
+text
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+__pycache__/
+*.pyc
+.vscode/
+.idea/
