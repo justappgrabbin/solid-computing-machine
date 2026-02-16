@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Code Architect - Hugging Face Powered Development Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        @keyframes gradient {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .gradient-bg {
+            background: linear-gradient(-45deg, #0f172a, #1e1b4b, #312e81, #0f172a);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .neon-glow {
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.5), 0 0 40px rgba(99, 102, 241, 0.3);
+        }
+
+        .code-block {
+            background: #0d1117;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .tab-active {
+            background: rgba(99, 102, 241, 0.2);
+            border-bottom: 2px solid #6366f1;
+        }
+
+        .drop-zone {
+            border: 2px dashed rgba(99, 102, 241, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .drop-zone.dragover {
+            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.1);
+            transform: scale(1.02);
+        }
+
+        .typing-indicator span {
+            animation: blink 1.4s infinite both;
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes blink {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
+
+        .file-tree-item:hover {
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.35s;
+            transform-origin: 50% 50%;
+        }
+
+        .mcp-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.5);
+            border-radius: 4px;
+        }
+
+        .pulse-ring {
+            position: absolute;
+            border-radius: 50%;
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.33); opacity: 1; }
+            80%, 100% { transform: scale(2); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="gradient-bg text-white min-h-screen overflow-hidden">
+    <div id="app" class="h-screen flex flex-col">
+        <!-- Header -->
+        <header class="glass border-b border-white/10 px-6 py-4 flex items-center justify-between z-50">
+            <div class="flex items-center gap-3">
+                <div class="relative w-10 h-10">
+                    <div class="absolute inset-0 bg-indigo-500 rounded-lg rotate-45 animate-pulse"></div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                        </svg>
+                    </div>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400">
+                        AI Code Architect
+                    </h1>
+                    <p class="text-xs text-gray-400 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                        Hugging Face Powered • MCP Enabled
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <button onclick="toggleMCPPanel()" class="mcp-badge px-4 py-2 rounded-lg text-sm font-semibold hover:scale-105 transition-transform flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    MCP Servers
+                </button>
+                <button onclick="showDeployModal()" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    Deploy
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex overflow-hidden">
+            <!-- Left Sidebar: File Upload & Library -->
+            <aside class="w-80 glass border-r border-white/10 flex flex-col">
+                <!-- Upload Zone -->
+                <div class="p-4 border-b border-white/10">
+                    <div id="dropZone" class="drop-zone rounded-xl p-6 text-center cursor-pointer" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" onclick="document.getElementById('fileInput').click()">
+                        <input type="file" id="fileInput" multiple class="hidden" onchange="handleFileSelect(event)" accept=".pdf,.zip,.tar,.gz,.js,.py,.html,.css,.json,.md,.txt">
+                        <svg class="w-12 h-12 mx-auto mb-3 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        <p class="text-sm font-medium text-gray-300">Drop files here</p>
+                        <p class="text-xs text-gray-500 mt-1">PDF, ZIP, TAR, GZ, Code files</p>
+                    </div>
+                </div>
+
+                <!-- File Tree -->
+                <div class="flex-1 overflow-y-auto p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Project Files</h3>
+                        <button onclick="clearAllFiles()" class="text-xs text-red-400 hover:text-red-300">Clear All</button>
+                    </div>
+                    <div id="fileTree" class="space-y-1">
+                        <p class="text-sm text-gray-500 italic">No files uploaded yet...</p>
+                    </div>
+                </div>
+
+                <!-- Component Library -->
+                <div class="p-4 border-t border-white/10 max-h-64 overflow-y-auto">
+                    <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Component Library</h3>
+                    <div id="componentLibrary" class="space-y-2">
+                        <p class="text-xs text-gray-500 italic">Components will appear here...</p>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center: Chat Interface -->
+            <main class="flex-1 flex flex-col min-w-0">
+                <!-- Model Selector -->
+                <div class="glass border-b border-white/10 px-4 py-2 flex items-center gap-4">
+                    <select id="modelSelect" class="bg-black/30 border border-white/20 rounded-lg px-3 py-1 text-sm focus:outline-none focus:border-indigo-500">
+                        <option value="microsoft/DialoGPT-medium">DialoGPT Medium</option>
+                        <option value="facebook/blenderbot-400M-distill">BlenderBot 400M</option>
+                        <option value="google/flan-t5-base">Flan-T5 Base</option>
+                        <option value="Salesforce/codet5-base">CodeT5 Base</option>
+                        <option value="bigcode/starcoder">StarCoder (Code Gen)</option>
+                    </select>
+                    <div class="flex items-center gap-2 text-xs text-gray-400">
+                        <span class="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                        <span>Analysis Mode: Active</span>
+                    </div>
+                </div>
+
+                <!-- Chat Messages -->
+                <div id="chatContainer" class="flex-1 overflow-y-auto p-6 space-y-4">
+                    <!-- Welcome Message -->
+                    <div class="flex gap-4">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <div class="glass rounded-2xl rounded-tl-none p-4">
+                                <p class="text-sm leading-relaxed">
+                                    Welcome to <strong>AI Code Architect</strong>! I'm powered by Hugging Face models and ready to help you build your application.
+                                </p>
+                                <p class="text-sm mt-2 text-gray-300">
+                                    Drop your files (PDFs, ZIPs, code files) in the sidebar, tell me your intentions, and I'll help you:
+                                </p>
+                                <ul class="text-sm mt-2 space-y-1 text-gray-300 list-disc list-inside">
+                                    <li>Analyze and understand your existing code</li>
+                                    <li>Generate new components and features</li>
+                                    <li>Integrate everything into a working app</li>
+                                    <li>Deploy to GitHub, Supabase, or local hosting</li>
+                                </ul>
+                                <p class="text-sm mt-3 text-indigo-400">
+                                    What would you like to build today?
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="glass border-t border-white/10 p-4">
+                    <div class="flex gap-3">
+                        <div class="flex-1 relative">
+                            <textarea id="userInput" rows="2" class="w-full bg-black/30 border border-white/20 rounded-xl px-4 py-3 pr-12 text-sm focus:outline-none focus:border-indigo-500 resize-none" placeholder="Describe what you want to build, or ask me to analyze your files..." onkeydown="handleKeyDown(event)"></textarea>
+                            <button onclick="sendMessage()" class="absolute right-2 bottom-2 p-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-2 text-xs text-gray-500">
+                        <span>Press Enter to send, Shift+Enter for new line</span>
+                        <span id="statusIndicator">Ready</span>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Right Sidebar: Code Preview & Live App -->
+            <aside class="w-96 glass border-l border-white/10 flex flex-col">
+                <!-- Tabs -->
+                <div class="flex border-b border-white/10">
+                    <button onclick="switchTab('preview')" id="tab-preview" class="flex-1 py-3 text-sm font-medium tab-active transition-colors">Live Preview</button>
+                    <button onclick="switchTab('code')" id="tab-code" class="flex-1 py-3 text-sm font-medium text-gray-400 hover:text-white transition-colors">Generated Code</button>
+                    <button onclick="switchTab('library')" id="tab-library" class="flex-1 py-3 text-sm font-medium text-gray-400 hover:text-white transition-colors">Unfinished</button>
+                </div>
+
+                <!-- Content -->
+                <div class="flex-1 overflow-hidden relative">
+                    <!-- Live Preview -->
+                    <div id="content-preview" class="absolute inset-0 flex flex-col">
+                        <div class="flex-1 bg-white/5 m-2 rounded-lg overflow-hidden">
+                            <iframe id="previewFrame" class="w-full h-full border-0" sandbox="allow-scripts allow-same-origin"></iframe>
+                        </div>
+                        <div class="p-3 border-t border-white/10 flex gap-2">
+                            <button onclick="refreshPreview()" class="flex-1 bg-white/10 hover:bg-white/20 py-2 rounded-lg text-xs font-medium transition-colors">
+                                Refresh Preview
+                            </button>
+                            <button onclick="openInNewWindow()" class="flex-1 bg-white/10 hover:bg-white/20 py-2 rounded-lg text-xs font-medium transition-colors">
+                                Open Full
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Generated Code -->
+                    <div id="content-code" class="absolute inset-0 hidden flex flex-col">
+                        <div class="flex items-center justify-between p-3 border-b border-white/10">
+                            <select id="fileSelector" onchange="loadFileContent()" class="bg-black/30 border border-white/20 rounded px-2 py-1 text-xs">
+                                <option>app.html</option>
+                            </select>
+                            <button onclick="copyCode()" class="text-xs text-indigo-400 hover:text-indigo-300">Copy</button>
+                        </div>
+                        <pre id="codeDisplay" class="flex-1 overflow-auto p-4 text-xs mono text-gray-300"><code>// Generated code will appear here...</code></pre>
+                    </div>
+
+                    <!-- Unfinished Library -->
+                    <div id="content-library" class="absolute inset-0 hidden overflow-y-auto p-4">
+                        <div id="unfinishedList" class="space-y-3">
+                            <p class="text-sm text-gray-500 text-center mt-8">No unfinished components yet...</p>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Deploy Modal -->
+    <div id="deployModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="glass rounded-2xl p-6 w-full max-w-md mx-4">
+            <h2 class="text-xl font-bold mb-4">Deploy Your App</h2>
+            <div class="space-y-3">
+                <button onclick="deployTo('github')" class="w-full p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center gap-3 transition-all hover:scale-[1.02]">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                    <div class="text-left">
+                        <div class="font-semibold">GitHub Pages</div>
+                        <div class="text-xs text-gray-400">Deploy as static site</div>
+                    </div>
+                </button>
+
+                <button onclick="deployTo('supabase')" class="w-full p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center gap-3 transition-all hover:scale-[1.02]">
+                    <svg class="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
+                    </svg>
+                    <div class="text-left">
+                        <div class="font-semibold">Supabase</div>
+                        <div class="text-xs text-gray-400">Backend + Database</div>
+                    </div>
+                </button>
+
+                <button onclick="deployTo('local')" class="w-full p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center gap-3 transition-all hover:scale-[1.02]">
+                    <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                    <div class="text-left">
+                        <div class="font-semibold">Local Server</div>
+                        <div class="text-xs text-gray-400">Download & run locally</div>
+                    </div>
+                </button>
+            </div>
+            <button onclick="closeDeployModal()" class="mt-4 w-full py-2 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium transition-colors">Cancel</button>
+        </div>
+    </div>
+
+    <!-- MCP Panel -->
+    <div id="mcpPanel" class="fixed right-0 top-16 bottom-0 w-80 glass border-l border-white/10 transform translate-x-full transition-transform duration-300 z-40 overflow-y-auto">
+        <div class="p-4">
+            <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                <span class="mcp-badge px-2 py-1 rounded text-xs">MCP</span>
+                Model Context Protocol
+            </h3>
+
+            <div class="space-y-4">
+                <div class="bg-white/5 rounded-lg p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-medium">File System</span>
+                        <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                    </div>
+                    <p class="text-xs text-gray-400">Access to uploaded files and project structure</p>
+                </div>
+
+                <div class="bg-white/5 rounded-lg p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-medium">Code Analysis</span>
+                        <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                    </div>
+                    <p class="text-xs text-gray-400">AST parsing and dependency analysis</p>
+                </div>
+
+                <div class="bg-white/5 rounded-lg p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-medium">GitHub API</span>
+                        <span class="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                    </div>
+                    <p class="text-xs text-gray-400">Repository creation and deployment</p>
+                    <input type="text" placeholder="GitHub Token" class="mt-2 w-full bg-black/30 border border-white/20 rounded px-2 py-1 text-xs">
+                </div>
+
+                <div class="bg-white/5 rounded-lg p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-medium">Supabase</span>
+                        <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                    </div>
+                    <p class="text-xs text-gray-400">Database and auth integration</p>
+                    <input type="text" placeholder="Project URL" class="mt-2 w-full bg-black/30 border border-white/20 rounded px-2 py-1 text-xs">
+                    <input type="text" placeholder="Anon Key" class="mt-2 w-full bg-black/30 border border-white/20 rounded px-2 py-1 text-xs">
+                </div>
+
+                <button onclick="addMCPServer()" class="w-full py-2 border border-dashed border-white/30 rounded-lg text-sm text-gray-400 hover:text-white hover:border-white/50 transition-colors">
+                    + Add Custom MCP Server
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global State
+        const state = {\n    hfToken: localStorage.getItem("hf_token") || "",
+            files: new Map(),
+            components: new Map(),
+            unfinished: new Map(),
+            currentCode: '',
+            chatHistory: [],
+            mcpServers: [],
+            hfToken: null
+        };
+
+        // File Upload Handlers
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files);
+            processFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            processFiles(files);
+        }
+
+        async function processFiles(files) {
+            for (const file of files) {
+                const content = await readFile(file);
+                state.files.set(file.name, {
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                    content: content,
+                    timestamp: Date.now()
+                });
+
+                // Analyze with Hugging Face
+                analyzeFile(file.name, content);
+            }
+            updateFileTree();
+            addMessage('system', `Processed ${files.length} file(s). I've analyzed the content and am ready to help you integrate them into your application.`);
+        }
+
+        function readFile(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                const extension = file.name.split('.').pop().toLowerCase();
+
+                if (['zip', 'gz', 'tar'].includes(extension)) {
+                    reader.readAsArrayBuffer(file);
+                    reader.onload = () => resolve({ type: 'binary', data: reader.result });
+                } else if (extension === 'pdf') {
+                    reader.readAsArrayBuffer(file);
+                    reader.onload = async () => {
+                        const text = await extractPDFText(reader.result);
+                        resolve({ type: 'pdf', text: text });
+                    };
+                } else {
+                    reader.readAsText(file);
+                    reader.onload = () => resolve({ type: 'text', content: reader.result });
+                }
+            });
+        }
+
+        async function extractPDFText(arrayBuffer) {
+            try {
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let text = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    text += content.items.map(item => item.str).join(' ') + '\n';
+                }
+                return text;
+            } catch (e) {
+                return 'Error extracting PDF text';
+            }
+        }
+
+        async function analyzeFile(filename, content) {
+            // Simulate HF analysis
+            updateStatus('Analyzing with Hugging Face...');
+
+            setTimeout(() => {
+                const analysis = {
+                    filename: filename,
+                    type: detectFileType(filename),
+                    components: extractComponents(content),
+                    dependencies: extractDependencies(content),
+                    summary: generateSummary(filename, content)
+                };
+
+                state.components.set(filename, analysis);
+                updateComponentLibrary();
+                updateStatus('Ready');
+            }, 1000);
+        }
+
+        function detectFileType(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const types = {
+                'js': 'JavaScript', 'py': 'Python', 'html': 'HTML', 
+                'css': 'CSS', 'json': 'JSON', 'md': 'Markdown',
+                'pdf': 'PDF Document', 'zip': 'ZIP Archive',
+                'gz': 'GZip Archive', 'tar': 'TAR Archive'
+            };
+            return types[ext] || 'Unknown';
+        }
+
+        function extractComponents(content) {
+            const components = [];
+            const text = typeof content === 'string' ? content : JSON.stringify(content);
+
+            // Detect React/Vue/Angular components
+            if (text.includes('function') || text.includes('class') || text.includes('=>')) {
+                const matches = text.match(/(?:function|class|const|let|var)\s+(\w+)/g);
+                if (matches) components.push(...matches.slice(0, 5));
+            }
+
+            return components;
+        }
+
+        function extractDependencies(content) {
+            const deps = [];
+            const text = typeof content === 'string' ? content : '';
+
+            if (text.includes('import')) {
+                const imports = text.match(/import\s+.*?from\s+['"]([^'"]+)['"]/g);
+                if (imports) deps.push(...imports.map(i => i.match(/from\s+['"]([^'"]+)['"]/)[1]));
+            }
+
+            return [...new Set(deps)].slice(0, 5);
+        }
+
+        function generateSummary(filename, content) {
+            return `Analyzed ${filename} - Contains ${typeof content === 'string' ? content.length : 'binary'} bytes of data`;
+        }
+
+        // UI Updates
+        function updateFileTree() {
+            const tree = document.getElementById('fileTree');
+            if (state.files.size === 0) {
+                tree.innerHTML = '<p class="text-sm text-gray-500 italic">No files uploaded yet...</p>';
+                return;
+            }
+
+            tree.innerHTML = Array.from(state.files.entries()).map(([name, file]) => `
+                <div class="file-tree-item flex items-center gap-2 p-2 rounded-lg cursor-pointer text-sm" onclick="selectFile('${name}')">
+                    <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <span class="truncate flex-1">${name}</span>
+                    <span class="text-xs text-gray-500">${(file.size / 1024).toFixed(1)}KB</span>
+                </div>
+            `).join('');
+        }
+
+        function updateComponentLibrary() {
+            const lib = document.getElementById('componentLibrary');
+            if (state.components.size === 0) return;
+
+            lib.innerHTML = Array.from(state.components.entries()).map(([name, analysis]) => `
+                <div class="bg-white/5 rounded-lg p-3 text-xs">
+                    <div class="font-semibold text-indigo-400 mb-1">${name}</div>
+                    <div class="text-gray-400">${analysis.type}</div>
+                    ${analysis.components.length ? `<div class="mt-1 text-gray-500">Components: ${analysis.components.join(', ')}</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        // Chat System
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            input.value = '';
+            addMessage('user', text);
+
+            // Show typing indicator
+            showTypingIndicator();
+
+            // Process with context
+            const context = buildContext();
+            const response = await generateResponse(text, context);
+
+            hideTypingIndicator();
+            addMessage('assistant', response.text);
+
+            if (response.code) {
+                updateGeneratedCode(response.code);
+                updatePreview(response.code);
+            }
+        }
+
+        function buildContext() {
+            return {
+                files: Array.from(state.files.keys()),
+                components: Array.from(state.components.entries()).map(([k, v]) => ({ name: k, ...v })),
+                history: state.chatHistory.slice(-5)
+            };
+        }
+
+        async function generateResponse(userMessage, context) {\n        updateStatus('Thinking...');\n\n        const prompt = `You are Rosanna, an AI software architect living inside a development IDE.\n\nYou help users build real applications from their uploaded files.\n\nUser message:\n${userMessage}\n\nProject context:\nFiles: ${context.files.join(', ')}\nComponents: ${context.components.map(c => c.name + ' (' + c.type + ')').join(', ')}\n\nRecent chat:\n${context.history.map(h => h.role + ': ' + h.text).join('\n')}\n\nRespond conversationally. If code is needed, output FULL working HTML.\nReturn JSON in this format:\n{\n "text": "...",\n "code": "<optional full html>"\n}\n`;\n\n        try {\n            const response = await fetch(\n                "https://api-inference.huggingface.co/models/google/gemma-2b-it",\n                {\n                    method: "POST",\n                    headers: {\n                        "Authorization": `Bearer ${state.hfToken}`,\n                        "Content-Type": "application/json"\n                    },\n                    body: JSON.stringify({\n                        inputs: prompt,\n                        parameters: {\n                            temperature: 0.7,\n                            max_new_tokens: 800,\n                            return_full_text: false\n                        }\n                    })\n                }\n            );\n\n            if (!response.ok) {\n                throw new Error(`HTTP ${response.status}: ${response.statusText}`);\n            }\n\n            const data = await response.json();\n            \n            // Handle different HF response formats\n            let raw_text = "";\n            if (Array.isArray(data) && data[0]?.generated_text) {\n                raw_text = data[0].generated_text;\n            } else if (data.generated_text) {\n                raw_text = data.generated_text;\n            } else if (typeof data === 'string') {\n                raw_text = data;\n            } else {\n                raw_text = JSON.stringify(data);\n            }\n\n            // Clean up the response\n            raw_text = raw_text.replace(prompt, '').trim();\n\n            // Try to extract JSON\n            let parsed;\n            try {\n                const jsonMatch = raw_text.match(/\{[\s\S]*?\}/);\n                if (jsonMatch) {\n                    parsed = JSON.parse(jsonMatch[0]);\n                } else {\n                    parsed = { text: raw_text, code: null };\n                }\n            } catch (e) {\n                parsed = { text: raw_text, code: null };\n            }\n\n            updateStatus('Ready');\n            return parsed;\n            \n        } catch (error) {\n            console.error('HF API Error:', error);\n            updateStatus('Error - check console');\n            return { \n                text: `I encountered an error: ${error.message}. Please check your HuggingFace token and try again.`, \n                code: null \n            };\n        }\n    }
+
+        function analyzeIntentions(message) {
+            const intents = [];
+            const lower = message.toLowerCase();
+
+            if (lower.includes('build') || lower.includes('create') || lower.includes('make') || lower.includes('app')) intents.push('create_app');
+            if (lower.includes('analyze') || lower.includes('look at') || lower.includes('check')) intents.push('analyze');
+            if (lower.includes('deploy') || lower.includes('publish') || lower.includes('host')) intents.push('deploy');
+            if (lower.includes('supabase')) intents.push('supabase');
+            if (lower.includes('github')) intents.push('github');
+
+            return intents;
+        }
+
+        function generateApplication(requirements, context) {
+            // Generate a complete HTML application based on requirements
+            const appCode = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generated App</title>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="gradient-bg text-white p-8">
+        <h1 class="text-4xl font-bold mb-2">Your Generated Application</h1>
+        <p class="opacity-90">Built with AI Code Architect + Hugging Face</p>
+    </div>
+
+    <main class="container mx-auto p-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            ${context.files.map(file => `
+            <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+                <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
+                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <h3 class="font-bold text-gray-800 mb-2">${file}</h3>
+                <p class="text-sm text-gray-600">Integrated component from your uploaded files</p>
+                <button class="mt-4 w-full py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                    Load Component
+                </button>
+            </div>
+            `).join('')}
+        </div>
+
+        <div class="mt-8 bg-white rounded-xl shadow-lg p-6">
+            <h2 class="text-2xl font-bold mb-4">Chat Interface</h2>
+            <div class="border rounded-lg p-4 h-64 overflow-y-auto mb-4 bg-gray-50">
+                <p class="text-gray-600">Chat history will appear here...</p>
+            </div>
+            <div class="flex gap-2">
+                <input type="text" placeholder="Type your message..." class="flex-1 border rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500">
+                <button class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Send</button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // App Logic
+        console.log('App initialized with ${context.files.length} components');
+
+        // MCP Integration placeholder
+        const mcp = {
+            servers: [],
+            call: async (server, method, params) => {
+                console.log('MCP Call:', server, method, params);
+                return { success: true };
+            }
+        };
+    <\/script>
+</body>
+</html>`;
+
+            return appCode;
+        }
+
+        function addMessage(role, text) {
+            const container = document.getElementById('chatContainer');
+            const isUser = role === 'user';
+            const isSystem = role === 'system';
+
+            const div = document.createElement('div');
+            div.className = 'flex gap-4 animate-fade-in';
+            div.innerHTML = `
+                ${!isUser ? `
+                <div class="w-10 h-10 rounded-full ${isSystem ? 'bg-gray-600' : 'bg-gradient-to-br from-indigo-500 to-purple-600'} flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${isSystem ? 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' : 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'}"/>
+                    </svg>
+                </div>
+                ` : ''}
+                <div class="flex-1 ${isUser ? 'flex justify-end' : ''}">
+                    <div class="glass rounded-2xl ${isUser ? 'rounded-tr-none bg-indigo-600/30' : isSystem ? 'rounded-tl-none bg-gray-600/30' : 'rounded-tl-none'} p-4 max-w-3xl">
+                        <p class="text-sm leading-relaxed whitespace-pre-wrap">${text}</p>
+                    </div>
+                </div>
+                ${isUser ? `
+                <div class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                </div>
+                ` : ''}
+            `;
+
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+
+            state.chatHistory.push({ role, text, timestamp: Date.now() });
+        }
+
+        function showTypingIndicator() {
+            const container = document.getElementById('chatContainer');
+            const div = document.createElement('div');
+            div.id = 'typingIndicator';
+            div.className = 'flex gap-4';
+            div.innerHTML = `
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <div class="glass rounded-2xl rounded-tl-none p-4 inline-block">
+                        <div class="typing-indicator flex gap-1">
+                            <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                            <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                            <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) indicator.remove();
+        }
+
+        // Code & Preview Management
+        function updateGeneratedCode(code) {
+            state.currentCode = code;
+            document.getElementById('codeDisplay').textContent = code;
+
+            // Add to file selector
+            const selector = document.getElementById('fileSelector');
+            const option = document.createElement('option');
+            option.text = `generated_app_${Date.now()}.html`;
+            selector.add(option);
+        }
+
+        function updatePreview(code) {
+            const frame = document.getElementById('previewFrame');
+            const blob = new Blob([code], { type: 'text/html' });
+            frame.src = URL.createObjectURL(blob);
+        }
+
+        function switchTab(tab) {
+            ['preview', 'code', 'library'].forEach(t => {
+                document.getElementById(`content-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).classList.remove('tab-active');
+                document.getElementById(`tab-${t}`).classList.add('text-gray-400');
+            });
+
+            document.getElementById(`content-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.add('tab-active');
+            document.getElementById(`tab-${tab}`).classList.remove('text-gray-400');
+        }
+
+        function refreshPreview() {
+            if (state.currentCode) {
+                updatePreview(state.currentCode);
+            }
+        }
+
+        function openInNewWindow() {
+            if (state.currentCode) {
+                const blob = new Blob([state.currentCode], { type: 'text/html' });
+                window.open(URL.createObjectURL(blob), '_blank');
+            }
+        }
+
+        function copyCode() {
+            navigator.clipboard.writeText(state.currentCode);
+            alert('Code copied to clipboard!');
+        }
+
+        // Deploy Modal
+        function showDeployModal() {
+            document.getElementById('deployModal').classList.remove('hidden');
+            document.getElementById('deployModal').classList.add('flex');
+        }
+
+        function closeDeployModal() {
+            document.getElementById('deployModal').classList.add('hidden');
+            document.getElementById('deployModal').classList.remove('flex');
+        }
+
+        async function deployTo(platform) {
+            closeDeployModal();
+            updateStatus(`Deploying to ${platform}...`);
+
+            setTimeout(() => {
+                addMessage('system', `Successfully prepared deployment package for ${platform}. ${platform === 'local' ? 'Download starting...' : 'Check your configured credentials to complete deployment.'}`);
+
+                if (platform === 'local' && state.currentCode) {
+                    downloadFile('app.html', state.currentCode);
+                }
+
+                updateStatus('Ready');
+            }, 2000);
+        }
+
+        function downloadFile(filename, content) {
+            const blob = new Blob([content], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+        }
+
+        // MCP Panel
+        function toggleMCPPanel() {
+            const panel = document.getElementById('mcpPanel');
+            panel.classList.toggle('translate-x-full');
+        }
+
+        function addMCPServer() {
+            const name = prompt('MCP Server Name:');
+            if (name) {
+                state.mcpServers.push({ name, url: '', active: false });
+                addMessage('system', `Added MCP server: ${name}. Configure it in the MCP panel.`);
+            }
+        }
+
+        // Utilities
+        function updateStatus(text) {
+            document.getElementById('statusIndicator').textContent = text;
+        }
+
+        function clearAllFiles() {
+            state.files.clear();
+            state.components.clear();
+            updateFileTree();
+            updateComponentLibrary();
+            addMessage('system', 'All files cleared. Ready for new uploads.');
+        }
+
+        function selectFile(filename) {
+            const file = state.files.get(filename);
+            if (file) {
+                addMessage('user', `Show me the contents of ${filename}`);
+                const content = typeof file.content === 'string' ? file.content : JSON.stringify(file.content, null, 2);
+                addMessage('assistant', `Here's the content of **${filename}**:\
+\\`\\`\\`\n${content.substring(0, 1000)}${content.length > 1000 ? '...' : ''}\\`\\`\\``);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+    // Initialize HF Token
+    if (!state.hfToken) {
+        state.hfToken = prompt("Enter your HuggingFace API token (get one at huggingface.co/settings/tokens):");
+        if (state.hfToken) {
+            localStorage.setItem("hf_token", state.hfToken);
+        }
+    }
+            updateStatus('Ready');
+            console.log('AI Code Architect initialized with MCP support');
+        });
+    </script>
+</body>
+</html>
